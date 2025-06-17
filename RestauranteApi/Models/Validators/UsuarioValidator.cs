@@ -29,12 +29,12 @@ namespace RestauranteApi.Models.Validators
                 errores.Add("La contraseña esta vacia");
             }
 
-            if (user.Nombre.Length > 45)
+            if (user.Nombre.Length > 100)
             {
                 errores.Add("El nombre de usuario debe tener una longitud máxima de 45 caracteres.");
             }
 
-            if (user.Contraseña.Length > 12)
+            if (user.Contraseña.Length > 255)
             {
                 errores.Add("La contraseña debe tener una longitud máxima de 12 caracteres.");
             }
@@ -48,7 +48,14 @@ namespace RestauranteApi.Models.Validators
             {
                 errores.Add("La contraseña debe tener al menos una letra mayusculas y una letra minuscula.");
             }
-
+            if(user.Rol == null || user.Rol == "")
+            {
+                user.Rol = "Mesero";
+            }
+            else if (user.Rol != "Cocinero" && user.Rol != "Mesero")
+            {
+                errores.Add("El rol debe ser Cocinero o Mesero.");
+            }
             return errores.Count == 0;
 
         }

@@ -24,6 +24,7 @@ namespace RestauranteApi.Controllers
         public UsuarioValidator Validator { get; }
         public JwtService Service { get; }
 
+        [HttpPost("Registrar")]
         public IActionResult Registrar(UsuarioDTO dto)
         {
             if (Validator.Validate(dto, out List<string> errores))
@@ -32,9 +33,7 @@ namespace RestauranteApi.Controllers
                 {
                     Contraseña = dto.Contraseña,
                     Nombre = dto.Nombre,
-                    Rol=dto.Rol ?? "Mesero"
-
-
+                    Rol=dto.Rol
                 };
                 Repository.Insert(user);
                 return Ok();

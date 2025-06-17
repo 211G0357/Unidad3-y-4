@@ -1,94 +1,97 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Repositories;
-using System.Linq;
 
 namespace RestauranteApi.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Cocinero")]
     [Route("api/[controller]")]
     [ApiController]
     public class CocinaController : ControllerBase
     {
         private readonly Repository<Pedido> pedidoRepository;
-        private readonly Repository<Pedidococina> pedidococinaRepository;
-        private readonly Repository<Pedidodetalle> pedidodetalleRepository;
+        private readonly Repository<Pedidodetalle> detalleRepository;
+        private readonly Repository<Pedidococina> cocinaRepository;
 
         public CocinaController(
             Repository<Pedido> pedidoRepository,
-            Repository<Pedidococina> pedidococinaRepository,
-            Repository<Pedidodetalle> pedidodetalleRepository)
+            Repository<Pedidodetalle> detalleRepository,
+            Repository<Pedidococina> cocinaRepository)
         {
             this.pedidoRepository = pedidoRepository;
-            this.pedidococinaRepository = pedidococinaRepository;
-            this.pedidodetalleRepository = pedidodetalleRepository;
+            this.detalleRepository = detalleRepository;
+            this.cocinaRepository = cocinaRepository;
         }
 
-        // Obtener todos los pedidos con sus detalles y estados de cocina
+        // 🔹 Obtener todos los pedidos activos con sus productos y estado
         [HttpGet]
-        public IActionResult GetPedidosCocina()
+        public IActionResult GetPedidos()
         {
             var pedidos = pedidoRepository.GetAll()
-                .Where(p => p.Estado != "Terminado") // Opcional, solo pedidos no terminados
-                .Select(p => new ListaTicketsDTO
-                {
-                    Id = p.IdPedido,
-                    NumMesa = (int)p.NumMesa,
-                    Detalles = pedidodetalleRepository.GetAll()
-                        .Where(d => d.IdPedido == p.IdPedido)
-                        .Select(d => new DetallesTicketDTO
-                        {
-                            IdDetalle = d.IdDetalle,
-                            TipoProducto = d.TipoProducto,
-                            IdProducto = (int)d.IdProducto,
-                            Cantidad = (int)d.Cantidad,
-                            PrecioUnitario = (decimal)d.PrecioUnitario,
-                            Estado = pedidococinaRepository.GetAll()
-                                .FirstOrDefault(pc => pc.IdDetalle == d.IdDetalle)?.Estado ?? "Pendiente"
-                        }).ToList()
-                }).ToList();
+            .Where(p => p.Estado != "Terminado")
+            .ToList(); 
 
-            return Ok(pedidos);
+            var detalles = detalleRepository.GetAll()
+                .ToList(); 
+
+            var cocinas = cocinaRepository.GetAll()
+                .ToList(); 
+
+            var resultado = pedidos.Select(p => new
+            {
+                p.IdPedido,
+                p.NumMesa,
+                p.Fecha,
+                Detalles = detalles
+                    .Where(d => d.IdPedido == p.IdPedido)
+                    .Select(d => new
+                    {
+                        d.IdDetalle,
+                        d.TipoProducto,
+                        d.IdProducto,
+                        d.Cantidad,
+                        Estado = cocinas.FirstOrDefault(c => c.IdDetalle == d.IdDetalle)?.Estado ?? "Pendiente"
+                    }).ToList()
+            }).ToList();
+
+            return Ok(resultado);
         }
 
-        
+        // 🔹 Cambiar estado de un producto
         [HttpPut("ActualizarEstado/{idDetalle}")]
-        public IActionResult ActualizarEstado(int idDetalle, [FromBody] string nuevoEstado)
+        public IActionResult ActualizarEstado(int idDetalle, [FromQuery] string nuevoEstado)
         {
-            var pedidoCocina = pedidococinaRepository.GetAll().FirstOrDefault(pc => pc.IdDetalle == idDetalle);
+            if (nuevoEstado != "Pendiente" && nuevoEstado != "En preparación" && nuevoEstado != "Terminado")
+                return BadRequest("Estado inválido.");
 
-            if (pedidoCocina == null)
+            var cocina = cocinaRepository.GetAll().FirstOrDefault(c => c.IdDetalle == idDetalle);
+            if (cocina == null)
             {
-                // Si no existe, se crea uno nuevo
-                pedidoCocina = new Pedidococina
+                cocina = new Pedidococina
                 {
                     IdDetalle = idDetalle,
                     Estado = nuevoEstado
                 };
-                pedidococinaRepository.Insert(pedidoCocina);
+                cocinaRepository.Insert(cocina);
             }
             else
             {
-                pedidoCocina.Estado = nuevoEstado;
-                pedidococinaRepository.Update(pedidoCocina);
+                cocina.Estado = nuevoEstado;
+                cocinaRepository.Update(cocina);
             }
 
-            
-            var idPedido = pedidodetalleRepository.GetAll()
-                .Where(d => d.IdDetalle == idDetalle)
-                .Select(d => d.IdPedido)
-                .FirstOrDefault();
-
-            if (idPedido != 0)
+            // Verificar si todos los detalles del pedido están "Terminado"
+            var detalle = detalleRepository.Get(idDetalle);
+            if (detalle != null)
             {
-                var todosDetalles = pedidococinaRepository.GetAll()
-                    .Where(pc => pedidodetalleRepository.GetAll().Any(d => d.IdDetalle == pc.IdDetalle && d.IdPedido == idPedido))
-                    .ToList();
+                var idPedido = detalle.IdPedido;
+                var detalles = detalleRepository.GetAll().Where(d => d.IdPedido == idPedido).ToList();
+                var todosTerminados = detalles.All(d =>
+                    cocinaRepository.GetAll().FirstOrDefault(c => c.IdDetalle == d.IdDetalle)?.Estado == "Terminado"
+                );
 
-                bool todosTerminado = todosDetalles.All(d => d.Estado == "Terminado");
-                if (todosTerminado)
+                if (todosTerminados)
                 {
                     var pedido = pedidoRepository.Get(idPedido);
                     if (pedido != null)
@@ -99,7 +102,7 @@ namespace RestauranteApi.Controllers
                 }
             }
 
-            return Ok();
+            return Ok("Estado actualizado correctamente.");
         }
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RestauranteApi.Models.Entities;
+using RestauranteApi.Models.Validators;
 using RestauranteApi.Repositories;
 using RestauranteApi.Services;
 using System.Text;
@@ -34,11 +35,22 @@ x.UseMySql(cs, ServerVersion.AutoDetect(cs)));
 builder.Services.AddScoped(typeof(Repository<>), typeof(Repository<>));
 builder.Services.AddTransient<JwtService>();
 
+//Validadores
+builder.Services.AddTransient<UsuarioValidator>();
+
+builder.Services.AddControllers();
+builder.Services.AddCors(x =>
+{
+    x.AddPolicy("todos", builder =>
+    {
+        builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
 
-
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseFileServer();

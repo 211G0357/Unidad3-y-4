@@ -1,6 +1,8 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Models.Validators;
 using RestauranteApi.Repositories;
@@ -37,6 +39,7 @@ builder.Services.AddTransient<JwtService>();
 
 //Validadores
 builder.Services.AddTransient<UsuarioValidator>();
+builder.Services.AddScoped<IValidator<ListaTicketsDTO>, ListaTicketsDTOValidator>();
 
 builder.Services.AddControllers();
 builder.Services.AddCors(x =>

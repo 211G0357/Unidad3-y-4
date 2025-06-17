@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Repositories;
+using RestauranteApi.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,7 +32,7 @@ x.UseMySql(cs, ServerVersion.AutoDetect(cs)));
 //builder.Services.AddSingleton AddScoped AddTransient
 
 builder.Services.AddScoped(typeof(Repository<>), typeof(Repository<>));
-
+builder.Services.AddTransient<JwtService>();
 
 
 var app = builder.Build();

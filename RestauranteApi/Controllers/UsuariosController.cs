@@ -8,7 +8,33 @@ using RestauranteApi.Models.Entities;
 using RestauranteApi.Models.Validators;
 namespace RestauranteApi.Controllers
 {
-    public class UsuariosController
+    [AllowAnonymous]
+    [Route("api[controller]")]
+    [ApiController]
+    public class UsuariosController:ControllerBase
     {
+        public UsuariosController(Repository<Usuario> repository, UsuarioValidator validator, JwtService service) 
+        {
+            Repository = repository;
+            Validator = validator;
+            Service = service;
+        }
+
+        public Repository<Usuario> Repository { get; }
+        public UsuarioValidator Validator { get; }
+        public JwtService Service { get; }
+        
+        public IActionResult Registrar(UsuarioDTO dto)
+        {
+            if (Validator.Validate(dto, out List<string> errores))
+            {
+                Usuario user = new()
+                {
+                    Contraseña=dto.Contraseña,
+                    Nombre=dto.Nombre,
+                    
+                }
+            } 
     }
+   
 }

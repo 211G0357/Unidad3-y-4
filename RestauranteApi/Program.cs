@@ -58,10 +58,18 @@ builder.Services.AddCors(x =>
 });
 
 var app = builder.Build();
+app.UseRouting();
 
+app.UseCors("todos");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/", context =>
+{
+    context.Response.Redirect("/Login.html");
+    return Task.CompletedTask;
+});
+
 app.MapHub<PedidosHub>("/pedidosHub");
 app.MapControllers();
 app.UseFileServer();

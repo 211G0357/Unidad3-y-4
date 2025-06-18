@@ -63,7 +63,7 @@
 <body>
     <div class="login-container">
         <h2>Bienvenido.</h2>
-        <form action="#" method="POST">
+        <form id="loginForm" action="#" method="POST">
             <label for="username">Usuario:</label>
             <input type="text" id="username" name="username" required>
 
@@ -76,32 +76,49 @@
     <script>
         document.getElementById("loginForm").addEventListener("submit", function (event) {
             event.preventDefault();
-            var username = document.getElementById("username").value;
-            var password = document.getElementById("password").value;
 
-            fetch("https://192.168.1.72:45455/api/Login", {
+            var username = document.getElementById("username").value.trim();
+            var password = document.getElementById("password").value.trim();
+
+            if (!username || !password) {
+                alert("Por favor llena todos los campos.");
+                return;
+            }
+
+            fetch("https://192.168.1.72:45455/api/usuarios/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ username: username, password: password })
+                body: JSON.stringify({
+                    Nombre: username,
+                    Contraseña: password
+                })
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Usuario o contraseña incorrectos.");
+                    }
+                    return response.json(); 
+                })
                 .then(data => {
-                    if (data.success) {
-                        if (data.role === "mesero") {
-                            window.location.href = "mesero.html";
-                        } else if (data.role === "cocinero") {
-                            window.location.href = "cocinero.html";
-                        } else {
-                            alert("Rol no identificado.");
-                        }
+                    
+                    localStorage.setItem("token", data.token);
+
+                    if (data.role === "Mesero") {
+                        window.location.href = "Index.html";
+                    } else if (data.role === "Cocinero") {
+                        window.location.href = "Cocina.html";
                     } else {
-                        alert("Usuario o contraseña incorrectos.");
+                        alert("Rol no identificado.");
                     }
                 })
-                .catch(error => console.error("Error:", error));
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert(error.message);
+                });
         });
+
     </script>
 </body>
 </html>

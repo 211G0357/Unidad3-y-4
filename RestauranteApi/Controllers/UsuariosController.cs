@@ -24,7 +24,7 @@ namespace RestauranteApi.Controllers
         public UsuarioValidator Validator { get; }
         public JwtService Service { get; }
 
-        [HttpPost]
+        [HttpPost("Registrar")]
         public IActionResult Registrar(UsuarioDTO dto)
         {
             if (Validator.Validate(dto, out List<string> errores))
@@ -43,7 +43,7 @@ namespace RestauranteApi.Controllers
                 return BadRequest(errores);
             }
         }
-        [HttpPost]
+        [HttpPost("Login")]
         public IActionResult Login(UsuarioDTO dto)
         {
             var token=Service.GenerarToken(dto);

@@ -33,7 +33,7 @@ namespace RestauranteApi.Controllers
                 {
                     Contraseña = dto.Contraseña,
                     Nombre = dto.Nombre,
-                    
+                    Rol=dto.Rol??"Mesero"
                 };
                 Repository.Insert(user);
                 return Ok();

@@ -1,0 +1,279 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido - Restaurante</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            background-color: aliceblue;
+        }
+
+        .menu {
+            width: 55%;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #8DBCC7;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket {
+            width: 40%;
+            padding: 20px;
+            background-color: #8DBCC7;
+            border-radius: 8px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            color: white;
+            background-color: #648DB3;
+        }
+
+        /*tablas de menu*/
+        table {
+            width: 55%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        th {
+            background-color: #FFD700;
+        }
+
+        td {
+            background-color: #FAF3DD;
+            cursor: pointer;
+        }
+
+            td:hover {
+                background-color: #f0e68c;
+            }
+        /*TABLA DE SABORES*/
+        #sabores-container {
+            margin-top: 20px;
+            display: none;
+            padding: 15px;
+            width: 55%;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+            #sabores-container strong {
+                font-size: 18px;
+                display: block;
+                margin-bottom: 10px;
+            }
+
+        #sabores-opciones {
+            background-color: #FADA7A;
+            width: 100%;
+            text-align: center;
+        }
+        /*TICKET*/
+        .ticket table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .ticket th, .ticket td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #FAF3DD;
+            text-align: left;
+        }
+
+        .ticket th {
+            background-color: #FFD700;
+            color: #333;
+        }
+
+        /*CAJITAS DE TEXTO Y FECHA*/
+        input[type="text"], input[type="datetime-local"] {
+            width: 55%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            display: block;
+            box-sizing: border-box;
+        }
+        /*BOTONES*/
+        button {
+            padding: 12px;
+            margin-top: 20px;
+            width: 50%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            justify-content: center;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <h2>🍔 Menú</h2>
+
+        <div>
+            <table>
+                <tr><th>🍔 Hamburguesas</th></tr>
+                <tr><td onclick="agregarAlTicket('Hamburguesa Sencilla', 50)">Hamburguesa Sencilla - $50</td></tr>
+                <tr><td onclick="agregarAlTicket('Hamburguesa Doble', 70)">Hamburguesa Doble - $70</td></tr>
+                <tr><td onclick="agregarAlTicket('Hamburguesa con Queso', 65)">Con Queso - $65</td></tr>
+            </table>
+        </div>
+
+        <div>
+            <table>
+                <tr><th>🍟 Papas</th></tr>
+                <tr><td onclick="agregarAlTicket('Papas Chicas', 20)">Papas Chicas - $20</td></tr>
+                <tr><td onclick="agregarAlTicket('Papas Grandes', 30)">Papas Grandes - $30</td></tr>
+                <tr><td onclick="agregarAlTicket('Papas con Queso')">Papas con Queso</td></tr>
+            </table>
+        </div>
+
+        <div>
+            <table>
+                <tr><th>🥤 Refrescos</th></tr>
+                <tr><td onclick="mostrarSabores('Chico', 15)">Refresco Chico - $15</td></tr>
+                <tr><td onclick="mostrarSabores('Mediano', 18)">Refresco Mediano - $18</td></tr>
+                <tr><td onclick="mostrarSabores('Grande', 20)">Refresco Grande - $20</td></tr>
+            </table>
+            <div id="sabores-container">
+                <strong>Elige un sabor:</strong>
+                <table id="sabores-opciones">
+                    <tr>
+                        <th style="background-color: #FADA7A;">Sabor</th>
+                        <th style="background-color: #F5F0CD;">Seleccionar</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="ticket">
+        <h2>🧾 Ticket</h2>
+
+        <label for="mesa"><strong>Mesa:</strong></label>
+        <input type="text" id="mesa" placeholder="Ingrese número de mesa">
+
+        <label for="fecha"><strong>Fecha:</strong></label>
+        <input type="datetime-local" id="fecha">
+
+        <p><strong>Estado:</strong> <span id="estado">Pendiente</span></p>
+
+        <table id="ticket-tabla">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio</th>
+                </tr>
+            </thead>
+            <tbody id="ticket-lista"></tbody>
+        </table>
+
+        <div class="total" style="margin-top: 10px; font-weight: bold;">
+            Total: $<span id="total">0</span>
+        </div>
+
+        <button onclick="enviarPedido()">Enviar a Cocina.</button>
+        <button onclink="Finalizar()">Finalizar Servicio.</button>
+    </div>
+
+    <script>
+        const ticket = [];
+        const ticketLista = document.getElementById('ticket-lista');
+        const totalSpan = document.getElementById('total');
+
+        function agregarAlTicket(NumMesa, precio) {
+            ticket.push({ NumMesa, precio });
+            renderTicket();
+        }
+
+        function renderTicket() {
+            ticketLista.innerHTML = '';
+            let total = 0;
+            ticket.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'ticket-item';
+                div.innerHTML = `<span>${item.NumMesa}</span><span>$${item.precio}</span>`;
+                ticketLista.appendChild(div);
+                total += item.precio;
+            });
+            totalSpan.textContent = total;
+        }
+
+        function enviarPedido() {
+            if (ticket.length === 0) {
+                alert('Agrega productos al ticket primero.');
+                return;
+            }
+
+            alert('Pedido enviado a cocina 🍔');
+            ticket.length = 0;
+            renderTicket();
+        }
+
+        function Finalizar() {
+            if (ticket.length === 0) {
+                alert("No hay ticket abierto.");
+                return;
+            }
+
+            let confirmacion = confirm("¿Confirmas que el ticket ha sido pagado?");
+            if (confirmacion) {
+                alert("✅ Ticket pagado. ¡Gracias por tu servicio!");
+                ticket.length = 0; // Vaciar ticket como cierre de servicio
+                renderTicket();
+            }
+        }
+
+        // Refrescos
+        const sabores = ['Naranja', 'Fresa', 'Coca'];
+        let saborBase = '';
+        let saborPrecio = 0;
+
+        function mostrarSabores(tamano, precio) {
+            saborBase = tamano;
+            saborPrecio = precio;
+
+            const container = document.getElementById('sabores-container');
+            const opciones = document.getElementById('sabores-opciones');
+            opciones.innerHTML = '';
+
+            sabores.forEach(sabor => {
+                const btn = document.createElement('div');
+                btn.className = 'producto';
+                btn.textContent = sabor;
+                btn.onclick = () => {
+                    agregarAlTicket(`Refresco ${saborBase} de ${sabor}`, saborPrecio);
+                    container.style.display = 'none';
+                };
+                opciones.appendChild(btn);
+            });
+            container.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

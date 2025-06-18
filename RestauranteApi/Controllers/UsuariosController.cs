@@ -33,7 +33,7 @@ namespace RestauranteApi.Controllers
                 {
                     Contraseña = dto.Contraseña,
                     Nombre = dto.Nombre,
-                    Rol=dto.Rol
+                    
                 };
                 Repository.Insert(user);
                 return Ok();
@@ -46,14 +46,21 @@ namespace RestauranteApi.Controllers
         [HttpPost("Login")]
         public IActionResult Login(UsuarioDTO dto)
         {
-            var token=Service.GenerarToken(dto);
+            var token = Service.GenerarToken(dto);
             if (token == null)
             {
-                return Unauthorized("El Usuario o contraseña son incorrectos");
+                return Unauthorized("Usuario o contraseña incorrectos");
             }
-            
-            return Ok(token);
-            
+
+            var usuario = Service.Repository.GetAll()
+                          .FirstOrDefault(x => x.Nombre == dto.Nombre);
+
+            return Ok(new
+            {
+                Token = token,
+                Rol = usuario?.Rol,
+                Usuario = usuario?.Nombre
+            });
         }
     }
 }

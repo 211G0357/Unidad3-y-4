@@ -48,14 +48,7 @@ namespace RestauranteApi.Models.Validators
             {
                 errores.Add("La contraseña debe tener al menos una letra mayusculas y una letra minuscula.");
             }
-            if(user.Rol == null || user.Rol == "")
-            {
-                user.Rol = "Mesero";
-            }
-            else if (user.Rol != "Cocinero" && user.Rol != "Mesero")
-            {
-                errores.Add("El rol debe ser Cocinero o Mesero.");
-            }
+            
             return errores.Count == 0;
 
         }

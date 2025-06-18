@@ -153,61 +153,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-async function cargarPedidos() {
-    try {
-        mostrarMensaje('Cargando pedidos activos...');
-        
-        const response = await fetch(`${API_BASE_URL}/PedidosActivos`, {
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                'Content-Type': 'application/json'
-            }
-        });
+        async function cargarPedidos() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/PedidosActivos`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
 
-        if (!response.ok) {
-            if (response.status === 401) {
-                mostrarMensaje('Sesión expirada. Por favor ingresa nuevamente.', true);
-                setTimeout(() => window.location.href = '/login', 3000);
-                return;
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const pedidos = await response.json();
+                console.log('Pedidos recibidos:', pedidos); // Verifica en consola
+                mostrarPedidos(pedidos);
+            } catch (error) {
+                console.error('Error cargando pedidos:', error);
+                mostrarMensaje('Error al cargar pedidos: ' + error.message, true);
             }
-            
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
         }
 
-        const pedidos = await response.json();
-        mostrarPedidos(pedidos);
-    } catch (error) {
-        console.error('Error al cargar pedidos:', error);
-        mostrarMensaje('Error al cargar pedidos: ' + error.message, true);
-    }
-}
+        function mostrarPedidos(pedidos) {
+            const contenedor = document.getElementById('contenedor-pedidos');
+            contenedor.innerHTML = '';
 
-function mostrarPedidos(pedidos) {
-    const contenedor = document.getElementById('contenedor-pedidos');
-    contenedor.innerHTML = '';
+            if (!pedidos || pedidos.length === 0) {
+                mostrarMensaje('No hay pedidos activos para preparar');
+                return;
+            }
 
-    if (!pedidos || pedidos.length === 0) {
-        mostrarMensaje('No hay pedidos activos para preparar');
-        return;
-    }
+            // Ordenar pedidos: primero los más recientes
+            pedidos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-    // Ordenar pedidos: primero los más antiguos
-    pedidos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            pedidos.forEach(pedido => {
+                // Mostrar todos los detalles del pedido, no filtrar
+                const detalles = pedido.detalles || [];
 
-    pedidos.forEach(pedido => {
-        // Filtrar solo productos de cocina (hamburguesas y papas)
-        const productosCocina = (pedido.detalles || []).filter(d => 
-            d.tipoProducto === 'Hamburguesa' || d.tipoProducto === 'Papas'
-        );
+                if (detalles.length === 0) return;
 
-        if (productosCocina.length === 0) return;
+                const divPedido = document.createElement('div');
+                divPedido.className = 'pedido';
+                divPedido.dataset.pedidoId = pedido.idPedido;
 
-        const divPedido = document.createElement('div');
-        divPedido.className = 'pedido';
-        divPedido.dataset.pedidoId = pedido.idPedido;
-
-        divPedido.innerHTML = `
+                divPedido.innerHTML = `
             <div class="pedido-header">
                 <h3>Pedido #${pedido.idPedido} - Mesa ${pedido.numMesa || 'N/A'}</h3>
                 <span class="estado estado-${(pedido.estado || 'Pendiente').toLowerCase().replace(' ', '-')}">
@@ -216,19 +205,19 @@ function mostrarPedidos(pedidos) {
             </div>
             <div class="pedido-fecha">${formatearFecha(pedido.fecha)}</div>
             <div class="productos-cocina">
-                ${productosCocina.map(producto => `
-                    <div class="producto" data-detalle-id="${producto.idDetalle}">
+                ${detalles.map(detalle => `
+                    <div class="producto" data-detalle-id="${detalle.idDetalle}">
                         <div class="producto-info">
-                            <span>${producto.cantidad}x ${obtenerNombreProducto(producto)}</span>
-                            <span class="estado estado-${(producto.estadoCocina || 'Pendiente').toLowerCase().replace(' ', '-')}">
-                                ${producto.estadoCocina || 'Pendiente'}
+                            <span>${detalle.cantidad}x ${detalle.tipoProducto} - ${detalle.producto || 'Detalle'}</span>
+                            <span class="estado estado-${(detalle.estadoCocina || 'Pendiente').toLowerCase().replace(' ', '-')}">
+                                ${detalle.estadoCocina || 'Pendiente'}
                             </span>
                         </div>
                         <div class="producto-acciones">
                             <select class="estado-select">
-                                <option value="Pendiente" ${(producto.estadoCocina || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                                <option value="En preparación" ${(producto.estadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
-                                <option value="Terminado" ${(producto.estadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
+                                <option value="Pendiente" ${(detalle.estadoCocina || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                                <option value="En preparación" ${(detalle.estadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
+                                <option value="Terminado" ${(detalle.estadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
                             </select>
                             <button class="btn-actualizar">Actualizar</button>
                         </div>
@@ -237,10 +226,9 @@ function mostrarPedidos(pedidos) {
             </div>
         `;
 
-        contenedor.appendChild(divPedido);
-    });
-}
-
+                contenedor.appendChild(divPedido);
+            });
+        }
 function obtenerNombreProducto(producto) {
     if (producto.producto) return producto.producto;
     if (producto.tipoProducto === 'Hamburguesa') return 'Hamburguesa';
@@ -248,90 +236,135 @@ function obtenerNombreProducto(producto) {
     return 'Producto';
 }
 
-async function conectarSignalR() {
-    try {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(HUB_URL)
-            .configureLogging(signalR.LogLevel.Warning)
-            .withAutomaticReconnect()
-            .build();
-
-        connection.on("EstadoActualizado", () => {
-            mostrarMensaje('Nueva actualización de estado recibida');
-            cargarPedidos();
-        });
-
-        connection.on("NuevoProducto", (mensaje) => {
-            mostrarMensaje(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
-            cargarPedidos();
-        });
-
-        connection.onreconnecting(() => {
-            mostrarMensaje('Reconectando con el servidor...', true);
-        });
-
-        connection.onreconnected(() => {
-            mostrarMensaje('Conexión restablecida');
-            cargarPedidos();
-        });
-
-        await connection.start();
-        console.log('Conectado al hub de pedidos');
-        
-        // Unirse al grupo de cocina
-        await connection.invoke("AddToGroup", "Cocina");
-    } catch (error) {
-        console.error('Error con SignalR:', error);
-        mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
-        // Plan B: Recargar cada 30 segundos si SignalR falla
-        setInterval(cargarPedidos, 30000);
-    }
-}
-
-function configurarEventListeners() {
-    // Delegación de eventos para los botones de actualización
-    document.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('btn-actualizar')) {
-            const productoDiv = e.target.closest('.producto');
-            const idDetalle = productoDiv.dataset.detalleId;
-            const select = productoDiv.querySelector('.estado-select');
-            const nuevoEstado = select.value;
-            
-            // Mostrar loader en el botón
-            e.target.disabled = true;
-            e.target.textContent = 'Actualizando...';
-            
+        async function conectarSignalR() {
             try {
-                const response = await fetch(`${API_BASE_URL}/ActualizarEstado/${idDetalle}?nuevoEstado=${encodeURIComponent(nuevoEstado)}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                        'Content-Type': 'application/json'
-                    }
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(HUB_URL, {
+                        skipNegotiation: true,
+                        transport: signalR.HttpTransportType.WebSockets,
+                        accessTokenFactory: () => localStorage.getItem('token')
+                    })
+                    .configureLogging(signalR.LogLevel.Information)
+                    .withAutomaticReconnect([0, 2000, 10000, 30000])
+                    .build();
+
+                // Agrega estos listeners adicionales
+                connection.onclose(error => {
+                    console.error('Conexión cerrada:', error);
+                    mostrarMensaje('Conexión perdida. Reconectando...', true);
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Error al actualizar estado');
-                }
+                connection.on("EstadoActualizado", (pedidoId) => {
+                    console.log('EstadoActualizado recibido para pedido:', pedidoId);
+                    cargarPedidos();
+                });
 
-                // Actualizar visualmente el estado
-                const estadoSpan = productoDiv.querySelector('.estado');
-                estadoSpan.textContent = nuevoEstado;
-                estadoSpan.className = `estado estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
-                
-                mostrarMensaje(`Estado actualizado a: ${nuevoEstado}`);
+                await connection.start();
+                console.log('Conectado al hub con ID:', connection.connectionId);
+
+                // Verifica la conexión al grupo
+                await connection.invoke("AddToGroup", "Cocina")
+                    .then(() => console.log('Unido al grupo Cocina'))
+                    .catch(err => console.error('Error uniendo al grupo:', err));
+
             } catch (error) {
-                console.error('Error al actualizar estado:', error);
-                mostrarMensaje('Error al actualizar estado: ' + error.message, true);
-            } finally {
-                // Restaurar botón
-                e.target.disabled = false;
-                e.target.textContent = 'Actualizar';
+                console.error('Error SignalR:', error);
+                mostrarMensaje('Error en conexión en tiempo real. Usando actualización manual...', true);
+                setInterval(cargarPedidos, 10000); // Actualizar cada 10 segundos
             }
         }
-    });
-}
+
+        function configurarEventListeners() {
+            document.addEventListener('click', async (e) => {
+                // Verificar que el clic fue en un botón de actualización
+                if (!e.target.classList.contains('btn-actualizar')) return;
+
+                const boton = e.target;
+                const productoDiv = boton.closest('.producto');
+
+                // Validar que existen los elementos necesarios
+                if (!productoDiv) {
+                    mostrarMensaje('No se encontró el producto asociado', true);
+                    return;
+                }
+
+                const idDetalle = parseInt(productoDiv.dataset.detalleId);
+                const select = productoDiv.querySelector('.estado-select');
+
+                if (!select) {
+                    mostrarMensaje('No se encontró el selector de estado', true);
+                    return;
+                }
+
+                const nuevoEstado = select.value;
+                const estadoSpan = productoDiv.querySelector('.estado');
+
+                // Validar datos
+                if (isNaN(idDetalle) || idDetalle <= 0) {
+                    mostrarMensaje('ID de producto inválido', true);
+                    return;
+                }
+
+                if (!['Pendiente', 'En preparación', 'Terminado'].includes(nuevoEstado)) {
+                    mostrarMensaje('Estado seleccionado no válido', true);
+                    return;
+                }
+
+                // Configurar estado de carga
+                boton.disabled = true;
+                const textoOriginal = boton.textContent;
+                boton.innerHTML = `
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Actualizando...
+        `;
+
+                try {
+                    // Enviar datos como JSON en el body
+                    const response = await fetch(`${API_BASE_URL}/ActualizarEstado`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            idDetalle: idDetalle,
+                            nuevoEstado: nuevoEstado
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errorMsg = errorData.message ||
+                            errorData.title ||
+                            `Error ${response.status}: ${response.statusText}`;
+                        throw new Error(errorMsg);
+                    }
+
+                    // Actualizar UI si la respuesta fue exitosa
+                    estadoSpan.textContent = nuevoEstado;
+                    estadoSpan.className = `estado estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
+
+                    mostrarMensaje(`Estado actualizado correctamente a: ${nuevoEstado}`);
+
+                } catch (error) {
+                    console.error('Error en actualización:', {
+                        error: error,
+                        detalle: idDetalle,
+                        estado: nuevoEstado
+                    });
+
+                    // Revertir el selector al estado anterior
+                    const estadoAnterior = estadoSpan.textContent;
+                    select.value = estadoAnterior;
+
+                    mostrarMensaje(`Error al actualizar: ${error.message}`, true);
+                } finally {
+                    // Restaurar botón
+                    boton.disabled = false;
+                    boton.textContent = textoOriginal;
+                }
+            });
+        }
 
 function formatearFecha(fechaString) {
     if (!fechaString) return 'Fecha no disponible';

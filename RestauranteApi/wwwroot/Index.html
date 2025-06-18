@@ -178,6 +178,8 @@
     <div class="ticket">
         <h2>🧾 Ticket</h2>
 
+        <button onclick="AgregarNuevoTicket()">Nuevo Pedido.</button>
+
         <label for="mesa"><strong>Mesa:</strong></label>
         <input type="text" id="mesa" placeholder="Ingrese número de mesa">
 
@@ -201,13 +203,23 @@
         </div>
 
         <button onclick="enviarPedido()">Enviar a Cocina.</button>
-        <button onclink="Finalizar()">Finalizar Servicio.</button>
+        <button onclinck="Finalizar()">Finalizar Servicio.</button>
     </div>
 
     <script>
         const ticket = [];
         const ticketLista = document.getElementById('ticket-lista');
         const totalSpan = document.getElementById('total');
+
+        function AgregarNuevoTicket() {
+            ticket.length = 0;
+            renderTicket();
+
+            document.getElementById('mesa').value = '';
+            document.getElementById('fecha').value = '';
+            document.getElementById('estado').textContent = 'Pendiente';
+            alert('Nuevo pedido iniciado 📝');
+        }
 
         function agregarAlTicket(NumMesa, precio) {
             ticket.push({ NumMesa, precio });

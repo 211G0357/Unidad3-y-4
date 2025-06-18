@@ -95,6 +95,61 @@ public class TicketsController : ControllerBase
 
         return Ok(pedidosPorMesa);
     }
+    [HttpPost("CrearTicketConDetalles")]
+    public IActionResult CrearTicketConDetalles([FromBody] CrearTicketConDetallesDTO dto)
+    {
+        if (dto.Detalles == null || !dto.Detalles.Any())
+            return BadRequest("Debe incluir al menos un producto.");
+
+        var idMesero = int.Parse(User.FindFirst("IdUsuario")?.Value ?? "0");
+
+        // Validar si ya existe un ticket activo en esa mesa
+        var yaExiste = ticketRepository.GetAll()
+            .Any(t => t.NumMesa == dto.NumMesa && t.Estado == "Pendiente");
+
+        if (yaExiste)
+            return BadRequest($"Ya existe un ticket activo para la mesa {dto.NumMesa}");
+
+        // Crear el ticket (pedido)
+        var nuevo = new Pedido
+        {
+            NumMesa = dto.NumMesa,
+            Fecha = DateTime.Now,
+            IdUsuario = idMesero,
+            Estado = "Pendiente"
+        };
+
+        ticketRepository.Insert(nuevo);
+
+        // Guardar los detalles
+        foreach (var detalle in dto.Detalles)
+        {
+            var nuevoDetalle = new Pedidodetalle
+            {
+                IdPedido = nuevo.IdPedido,
+                TipoProducto = detalle.TipoProducto,
+                IdProducto = detalle.IdProducto,
+                Cantidad = detalle.Cantidad,
+                PrecioUnitario = detalle.PrecioUnitario
+            };
+
+            _context.Pedidodetalle.Add(nuevoDetalle);
+
+            // Si es hamburguesa o papas, agregamos registro a cocina
+            if (detalle.TipoProducto.Contains("Hamburguesa") || detalle.TipoProducto.Contains("Papas"))
+            {
+                _context.Pedidococina.Add(new Pedidococina
+                {
+                    IdDetalleNavigation = nuevoDetalle,
+                    Estado = "Pendiente"
+                });
+            }
+        }
+
+        _context.SaveChanges();
+
+        return Ok(new { mensaje = "Ticket creado correctamente", nuevo.IdPedido });
+    }
     [Authorize(Roles = "Mesero,Cocinero")]
     [HttpGet("get")]
     public IActionResult Get()

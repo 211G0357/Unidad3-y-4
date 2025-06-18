@@ -142,9 +142,9 @@
         <div>
             <table>
                 <tr><th>🍔 Hamburguesas</th></tr>
-                <tr><td onclick="agregarAlTicket('Hamburguesa Sencilla', 50)">Hamburguesa Sencilla - $50</td></tr>
-                <tr><td onclick="agregarAlTicket('Hamburguesa Doble', 70)">Hamburguesa Doble - $70</td></tr>
-                <tr><td onclick="agregarAlTicket('Hamburguesa con Queso', 65)">Con Queso - $65</td></tr>
+                <tr><td onclick="agregarAlTicket('Hamb. Sencilla', 50)">Hamburguesa Sencilla - $50</td></tr>
+                <tr><td onclick="agregarAlTicket('Hamb. Doble', 70)">Hamburguesa Doble - $70</td></tr>
+                <tr><td onclick="agregarAlTicket('Hamb. con Queso', 65)">Con Queso - $65</td></tr>
             </table>
         </div>
 
@@ -203,13 +203,32 @@
         </div>
 
         <button onclick="enviarPedido()">Enviar a Cocina.</button>
-        <button onclinck="Finalizar()">Finalizar Servicio.</button>
+        <button onclick="Finalizar()">Finalizar Servicio.</button>
     </div>
 
     <script>
         const ticket = [];
         const ticketLista = document.getElementById('ticket-lista');
         const totalSpan = document.getElementById('total');
+        const mesaInput = document.getElementById('mesa');
+
+        const productoCatalogo = {
+            "Hamb. Sencilla": { id: 1, precio: 50 },
+            "Hamb. Doble": { id: 2, precio: 70 },
+            "Hamb. con Queso": { id: 3, precio: 65 },
+            "Papas Chicas": { id: 4, precio: 20 },
+            "Papas Grandes": { id: 5, precio: 30 },
+            "Papas con Queso": { id: 6, precio: 25 },
+            "Ref. Chico de Naranja": { id: 7, precio: 15 },
+            "Ref. Chico de Fresa": { id: 8, precio: 15 },
+            "Ref. Chico de Coca": { id: 9, precio: 15 },
+            "Ref. Mediano de Naranja": { id: 10, precio: 18 },
+            "Ref. Mediano de Fresa": { id: 11, precio: 18 },
+            "Ref. Mediano de Coca": { id: 12, precio: 18 },
+            "Ref. Grande de Naranja": { id: 13, precio: 20 },
+            "Ref. Grande de Fresa": { id: 14, precio: 20 },
+            "Ref. Grande de Coca": { id: 15, precio: 20 }
+        };
 
         function AgregarNuevoTicket() {
             ticket.length = 0;
@@ -221,8 +240,20 @@
             alert('Nuevo pedido iniciado 📝');
         }
 
-        function agregarAlTicket(NumMesa, precio) {
-            ticket.push({ NumMesa, precio });
+        function agregarAlTicket(nombreProducto, precio = null) {
+            const producto = productoCatalogo[nombreProducto];
+            if (!producto) {
+                alert("Producto no registrado.");
+                return;
+            }
+
+            ticket.push({
+                tipoProducto: nombreProducto,
+                idProducto: producto.id,
+                cantidad: 1,
+                precioUnitario: producto.precio
+            });
+
             renderTicket();
         }
 
@@ -230,36 +261,68 @@
             ticketLista.innerHTML = '';
             let total = 0;
             ticket.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'ticket-item';
-                div.innerHTML = `<span>${item.NumMesa}</span><span>$${item.precio}</span>`;
-                ticketLista.appendChild(div);
-                total += item.precio;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${item.tipoProducto}</td><td>$${item.precioUnitario}</td>`;
+                ticketLista.appendChild(tr);
+                total += item.precioUnitario * item.cantidad;
             });
             totalSpan.textContent = total;
         }
 
-        function enviarPedido() {
-            if (ticket.length === 0) {
-                alert('Agrega productos al ticket primero.');
+        async function enviarPedido() {
+            const token = localStorage.getItem("token");
+            const mesa = document.getElementById("mesa").value;
+
+            if (!mesa) {
+                alert("Ingresa el número de mesa.");
                 return;
             }
 
-            alert('Pedido enviado a cocina 🍔');
-            ticket.length = 0;
-            renderTicket();
+            if (ticket.length === 0) {
+                alert("Agrega productos al ticket.");
+                return;
+            }
+
+            const dto = {
+                numMesa: parseInt(mesa),
+                detalles: ticket.map(p => ({
+                    tipoProducto: p.tipoProducto.substring(0, 30),  // Corrected property name
+                    idProducto: p.idProducto,
+                    cantidad: p.cantidad,
+                    precioUnitario: p.precioUnitario,
+                    estado: "Pendiente"
+                }))
+            };
+
+            try {
+                const response = await fetch("https://10.1.195.177:45456/api/Tickets/CrearTicketConDetalles", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify(dto)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText);
+                }
+
+                const result = await response.json();
+                alert("✅ " + result.mensaje);
+                ticket.length = 0;
+                renderTicket();
+
+            } catch (error) {
+                console.error("Error al enviar el ticket:", error);
+                if (error.message.includes("Data truncated")) {
+                    alert("Error: Los nombres de productos no deben exceder 30 caracteres.");
+                } else {
+                    alert("Error al enviar el ticket: " + error.message);
+                }
+            }
         }
-        // Guardar el pedido
-        const pedido = {
-            mesa: mesaInput.value,
-            platillos: ["Hamburguesa", "Papas"],
-            estado: "Pendiente"
-        };
-
-        let pedidos = JSON.parse(localStorage.getItem("todosLosPedidos")) || [];
-        pedidos.push(pedido);
-        localStorage.setItem("todosLosPedidos", JSON.stringify(pedidos));
-
 
         function Finalizar() {
             if (ticket.length === 0) {
@@ -267,19 +330,13 @@
                 return;
             }
 
-            let confirmacion = confirm("¿Confirmas que el ticket ha sido pagado?");
-            if (confirmacion) {
+            if (confirm("¿Confirmas que el ticket ha sido pagado?")) {
                 alert("✅ Ticket pagado. ¡Gracias por tu servicio!");
-                ticket.length = 0; // Vaciar ticket como cierre de servicio
+                ticket.length = 0;
                 renderTicket();
             }
         }
 
-        const params = new URLSearchParams(window.location.search);
-        const mesa = params.get("mesa");
-        console.log("Número de mesa recibido:", mesa);
-
-        // Refrescos
         const sabores = ['Naranja', 'Fresa', 'Coca'];
         let saborBase = '';
         let saborPrecio = 0;
@@ -293,16 +350,27 @@
             opciones.innerHTML = '';
 
             sabores.forEach(sabor => {
-                const btn = document.createElement('div');
-                btn.className = 'producto';
-                btn.textContent = sabor;
-                btn.onclick = () => {
-                    agregarAlTicket(`Refresco ${saborBase} de ${sabor}`, saborPrecio);
-                    container.style.display = 'none';
-                };
-                opciones.appendChild(btn);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${sabor}</td>
+                    <td><button onclick="seleccionarSabor('${saborBase}', '${sabor}')">Agregar</button></td>
+                `;
+                opciones.appendChild(tr);
             });
+
             container.style.display = 'block';
+        }
+
+        function seleccionarSabor(tamano, sabor) {
+            const nombreCompleto = `Ref. ${tamano} de ${sabor}`;
+            agregarAlTicket(nombreCompleto);
+            document.getElementById('sabores-container').style.display = 'none';
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const mesa = params.get("mesa");
+        if (mesa) {
+            document.getElementById("mesa").value = mesa;
         }
     </script>
 </body>

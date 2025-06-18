@@ -1,10 +1,126 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos de Cocina</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background-color: #8DBCC7;
+        }
+
+        h2 {
+            text-align: center;
+            color: white;
+            background-color: #648DB3;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 0;
+        }
+
+        .pedido {
+            border-radius: 10px;
+            background-color: #f4f4f4;
+            padding: 20px;
+            margin-bottom: 10px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            font-family: "Poppins", sans-serif;
+        }
+
+        .pedido-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+            .pedido-row label {
+                width: 100px;
+                font-weight: bold;
+                font-size: 16px;
+                margin: 0;
+            }
+
+            .pedido-row p,
+            .pedido-row {
+                margin: 0;
+                padding: 4px;
+                font-size: 16px;
+                flex: 1;
+                width: 50%;
+            }
+
+        select {
+            padding: 12px;
+            border: 1px solid #ccc;
+            background-color: white;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px;
+            margin-top: 20px;
+            width: 25%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            justify-content: center;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+    </style>
 </head>
 <body>
+    <h2>Cocina</h2>
+
+    <div class="pedido">
+        <p><strong>Pedido #1</strong></p>
+
+        <div class="pedido-row">
+            <label>Mesero:</label>
+            <p>Juan Pérez</p>
+        </div>
+
+        <div class="pedido-row">
+            <label>Platillos:</label>
+            <p>Hamburguesa Mini, Papas Chicas</p>
+        </div>
+
+        <div class="pedido-row">
+            <label>Estado:</label>
+            <select>
+                <option value="pendiente">Pendiente</option>
+                <option value="preparacion">En preparación</option>
+                <option value="terminado">Terminado</option>
+            </select>
+        </div>
+
+        <button onclick="alert('Pedido actualizado')">Actualizar</button>
+    </div>
+
+    <script>function actualizarPedido(id) {
+            const estado = document.getElementById(`estadoPedido${id}`).value;
+
+            fetch(`/actualizarPedido`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id, estado: estado })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(`Pedido ${id} actualizado a: ${estado}`);
+
+                    // Borrar el pedido de la página después de actualizar
+                    document.getElementById(`pedido${id}`).remove();
+                })
+                .catch(error => console.error("Error al actualizar pedido:", error));
+        }</script>
 
 </body>
 </html>

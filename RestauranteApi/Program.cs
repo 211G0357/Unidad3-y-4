@@ -38,9 +38,10 @@ builder.Services.AddScoped(typeof(Repository<>), typeof(Repository<>));
 builder.Services.AddTransient<JwtService>();
 
 //Validadores
+builder.Services.AddSignalR();
 builder.Services.AddTransient<UsuarioValidator>();
 builder.Services.AddScoped<IValidator<ListaTicketsDTO>, ListaTicketsDTOValidator>();
-
+builder.Services.AddScoped<TicketDetalleValidator>();
 builder.Services.AddControllers();
 builder.Services.AddCors(x =>
 {
@@ -55,6 +56,7 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<PedidosHub>("/pedidosHub");
 app.MapControllers();
 app.UseFileServer();
 app.Run();

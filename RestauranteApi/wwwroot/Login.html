@@ -79,7 +79,7 @@
             var username = document.getElementById("username").value;
             var password = document.getElementById("password").value;
 
-            fetch("server.php", {
+            fetch("https://192.168.1.72:45455/api/Login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

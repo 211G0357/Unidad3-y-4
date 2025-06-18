@@ -35,13 +35,21 @@
 <body>
 
     <h1>Pedidos Agrupados por Mesa</h1>
-    <div id="contenedor-pedidos"></div>
+    <!--<div id="contenedor-pedidos"></div>-->
+    <div class="pedido" onclick="IrATicket(1)">
+        <p><strong>Mesa </strong>#1</p>
+        <p><strong>Mesero:</strong> ale</p>
+        <p><strong>Platillos:</strong> Hamburguesa, Papas</p>
+    </div>
 
     <script>
+        function IrATicket(mesa) {
+            window.location.href = `Index.html?mesa=${mesa}`;
+        }
+
         const pedidos = JSON.parse(localStorage.getItem("todosLosPedidos")) || [
             { mesa: "1", platillos: ["Hamburguesa", "Refresco"], estado: "Pendiente" },
-            { mesa: "2", platillos: ["Papas", "Agua"], estado: "Preparación" },
-            { mesa: "1", platillos: ["Hot Dog"], estado: "Pendiente" }
+            { mesa: "2", platillos: ["Papas", "Agua"], estado: "Preparación" }
         ];
 
         // Agrupar pedidos por número de mesa
@@ -62,9 +70,9 @@
                 const divPedido = document.createElement("div");
                 divPedido.className = "pedido";
                 divPedido.innerHTML = `
-                        <p><strong>Platillos:</strong> ${pedido.platillos.join(", ")}</p>
-                        <p><strong>Estado:</strong> ${pedido.estado}</p>
-                    `;
+                            <p><strong>Platillos:</strong> ${pedido.platillos.join(", ")}</p>
+                            <p><strong>Estado:</strong> ${pedido.estado}</p>
+                        `;
                 divMesa.appendChild(divPedido);
             });
 

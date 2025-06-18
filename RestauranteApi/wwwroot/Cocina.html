@@ -20,49 +20,83 @@
         }
 
         .pedido {
-            border: 1px solid #ccc;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
             padding: 15px;
             margin-bottom: 20px;
-            border-radius: 5px;
             background-color: #f9f9f9;
         }
 
-        .pedido-row {
+        .pedido-header {
             display: flex;
-            margin-bottom: 8px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
         }
 
-            .pedido-row label {
-                font-weight: bold;
-                width: 120px;
+            .pedido-header h3 {
+                margin: 0;
+                color: #333;
             }
 
-        .producto-item {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 4px;
-        }
-
-        button {
+        .mesa {
             background-color: #4CAF50;
             color: white;
-            padding: 8px 12px;
-            border: none;
+            padding: 3px 8px;
             border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
+            font-size: 0.9em;
         }
 
-            button:hover {
-                background-color: #45a049;
+        .pedido-info {
+            margin-bottom: 15px;
+        }
+
+            .pedido-info p {
+                margin: 5px 0;
             }
 
-        select {
-            padding: 5px;
+        .pedido-acciones {
+            display: flex;
+            gap: 10px;
+        }
+
+        .estado-pedido {
+            flex-grow: 1;
+            padding: 8px;
             border-radius: 4px;
             border: 1px solid #ddd;
         }
+
+        .btn-actualizar {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .btn-actualizar:hover {
+                background-color: #45a049;
+            }
+
+        /* Mensajes */
+        .mensaje-pedidos {
+            padding: 15px;
+            margin: 20px 0;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+            .mensaje-pedidos.error {
+                background-color: #ffebee;
+                border-color: #ef9a9a;
+                color: #c62828;
+            }
     </style>
 </head>
 <body>
@@ -94,196 +128,193 @@
     </div>
 
     <script>
-        function PedidosActivos() {
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                alert('No estás autenticado. Por favor inicia sesión.');
-                window.location.href = '/login';
-                return;
-            }
-
-            fetch('/api/Cocina/PedidosActivos', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-                .then(response => {
-                    if (response.status === 401) {
-                        alert('Sesión expirada o no autorizada');
-                        window.location.href = '/login';
-                        return Promise.reject('Unauthorized');
-                    }
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(pedidos => {
-                    console.log('Datos recibidos:', pedidos); // Para depuración
-
-                    const contenedorPedidos = document.querySelector('body');
-
-                    // Limpiar pedidos existentes (excepto el título)
-                    document.querySelectorAll('.pedido').forEach(pedido => pedido.remove());
-
-                    // Verificar si hay pedidos
-                    if (!pedidos || !Array.isArray(pedidos)) {
-                        console.warn('La respuesta no contiene un array de pedidos:', pedidos);
-                        mostrarMensaje('No hay pedidos activos en este momento');
-                        return;
-                    }
-
-                    // Contador para pedidos válidos
-                    let pedidosMostrados = 0;
-
-                    // Crear elementos para cada pedido
-                    pedidos.forEach(pedido => {
-                        // Validación básica del objeto pedido
-                        if (!pedido || typeof pedido !== 'object') {
-                            console.warn('Pedido inválido:', pedido);
-                            return;
-                        }
-
-                        // Verificar que el pedido tenga ID
-                        const pedidoId = pedido.IdPedido || 'N/A';
-
-                        // Verificar que el pedido tenga detalles
-                        if (!pedido.Detalles || !Array.isArray(pedido.Detalles)) {
-                            console.warn(`Pedido ${pedidoId} no tiene detalles válidos:`, pedido);
-                            return;
-                        }
-
-                        // Filtrar solo los productos de cocina (hamburguesas y papas)
-                        const productosCocina = pedido.Detalles.filter(d =>
-                            d && d.TipoProducto && (d.TipoProducto === 'Hamburguesa' || d.TipoProducto === 'Papas')
-                        );
-
-                        // Si no hay productos de cocina en este pedido, no lo mostramos
-                        if (productosCocina.length === 0) {
-                            console.log(`Pedido ${pedidoId} no contiene productos para cocina`);
-                            return;
-                        }
-
-                        // Crear HTML del pedido
-                        const divPedido = document.createElement('div');
-                        divPedido.className = 'pedido';
-                        divPedido.id = `pedido${pedidoId}`;
-
-                        divPedido.innerHTML = `
-                <p><strong>Pedido #${pedidoId}</strong></p>
-                <div class="pedido-row">
-                    <label>Mesa:</label>
-                    <p>${pedido.NumMesa || 'N/A'}</p>
-                </div>
-                <div class="pedido-row">
-                    <label>Estado general:</label>
-                    <p>${pedido.Estado || 'Pendiente'}</p>
-                </div>
-                <div class="pedido-row">
-                    <label>Fecha:</label>
-                    <p>${pedido.Fecha ? new Date(pedido.Fecha).toLocaleString() : 'N/A'}</p>
-                </div>
-                <hr>
-                <h4>Productos para preparar:</h4>
-                ${productosCocina.map(detalle => `
-                    <div class="producto-item" id="detalle${detalle.IdDetalle || ''}">
-                        <div class="pedido-row">
-                            <label>Tipo:</label>
-                            <p>${detalle.TipoProducto || 'Producto'}</p>
-                        </div>
-                        <div class="pedido-row">
-                            <label>Producto:</label>
-                            <p>${detalle.Producto || 'Producto'} (${detalle.Cantidad || 1}x)</p>
-                        </div>
-                        <div class="pedido-row">
-                            <label>Estado:</label>
-                            <select id="estadoPedido${detalle.IdDetalle || ''}">
-                                <option value="Pendiente" ${(detalle.EstadoCocina || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                                <option value="En preparación" ${(detalle.EstadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
-                                <option value="Terminado" ${(detalle.EstadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
-                            </select>
-                        </div>
-                        <button onclick="actualizarPedido(${detalle.IdDetalle || ''})">Actualizar estado</button>
-                        <hr>
-                    </div>
-                `).join('')}
-            `;
-
-                        contenedorPedidos.appendChild(divPedido);
-                        pedidosMostrados++;
-                    });
-
-                    if (pedidosMostrados === 0) {
-                        mostrarMensaje('No hay pedidos con productos para preparar');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    if (error !== 'Unauthorized') {
-                        mostrarMensaje('Error al cargar los pedidos activos');
-                    }
-                });
-        }
-
-        function mostrarMensaje(texto) {
-            const mensajeDiv = document.createElement('div');
-            mensajeDiv.className = 'mensaje-info';
-            mensajeDiv.textContent = texto;
-            document.querySelector('body').appendChild(mensajeDiv);
-        }
-
-        async function actualizarPedido(idDetalle) {
+        async function cargarPedidosActivos() {
             try {
-                const estado = document.getElementById(`estadoPedido${idDetalle}`).value;
+                // 1. Obtener token de autenticación
                 const token = localStorage.getItem('token');
-
                 if (!token) {
-                    throw new Error('No autenticado');
+                    mostrarMensaje('Debes iniciar sesión para ver los pedidos', true);
+                    return;
                 }
 
-                const response = await fetch(`/api/Cocina/ActualizarEstado/${idDetalle}?nuevoEstado=${encodeURIComponent(estado)}`, {
-                    method: "PUT",
+                // 2. Hacer la petición al backend
+                const respuesta = await fetch('/api/Cocina/PedidosActivos', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
+                // 3. Verificar respuesta
+                if (respuesta.status === 401) {
+                    mostrarMensaje('Sesión expirada. Por favor inicia sesión nuevamente.', true);
                     return;
                 }
 
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                if (!respuesta.ok) {
+                    throw new Error(`Error ${respuesta.status} al obtener pedidos`);
                 }
 
-                const data = await response.json();
-                alert(`Estado actualizado a: ${estado}`);
+                // 4. Procesar los pedidos recibidos
+                const pedidos = await respuesta.json();
+                console.log('Datos recibidos:', pedidos);
 
-                if (estado === "Terminado") {
-                    const elemento = document.getElementById(`detalle${idDetalle}`);
-                    if (elemento) elemento.remove();
+                // 5. Limpiar vista anterior
+                const contenedor = document.getElementById('contenedor-pedidos') || document.body;
+                contenedor.querySelectorAll('.pedido').forEach(p => p.remove());
 
-                    // Verificar si el pedido quedó vacío
-                    const pedidoId = elemento?.closest('.pedido')?.id?.replace('pedido', '');
-                    if (pedidoId) {
-                        const productosRestantes = document.querySelectorAll(`#pedido${pedidoId} .producto-item`).length;
-                        if (productosRestantes === 0) {
-                            document.getElementById(`pedido${pedidoId}`)?.remove();
-                        }
+                // 6. Verificar si hay pedidos
+                if (!pedidos || !Array.isArray(pedidos)) {
+                    mostrarMensaje('Formato de datos incorrecto', true);
+                    return;
+                }
+
+                // 7. Filtrar y mostrar pedidos
+                let hayPedidos = false;
+
+                pedidos.forEach(pedido => {
+                    // Verificar estructura del pedido
+                    if (!pedido || !pedido.idPedido || !Array.isArray(pedido.detalles)) {
+                        console.warn('Pedido con estructura inválida:', pedido);
+                        return;
                     }
+
+                    // Filtrar solo productos de cocina (Hamburguesas y Papas)
+                    const productosCocina = pedido.detalles.filter(detalle => {
+                        return detalle &&
+                            detalle.TipoProducto &&
+                            ['Hamburguesa', 'Papas'].includes(detalle.TipoProducto);
+                    });
+
+                    if (productosCocina.length === 0) return;
+
+                    hayPedidos = true;
+
+                    // Crear elemento HTML para el pedido
+                    const divPedido = document.createElement('div');
+                    divPedido.className = 'pedido';
+                    divPedido.dataset.id = pedido.idPedido;
+
+                    // Crear lista de productos
+                    const listaProductos = productosCocina.map(p =>
+                        `${p.Producto || p.TipoProducto} (${p.Cantidad || 1}x)`
+                    ).join(', ');
+
+                    // Estructura HTML (similar a tu diseño original)
+                    divPedido.innerHTML = `
+                <div class="pedido-header">
+                    <h3>Pedido #${pedido.idPedido}</h3>
+                    <span class="mesa">Mesa ${pedido.numMesa || 'N/A'}</span>
+                </div>
+                
+                <div class="pedido-body">
+                    <div class="pedido-info">
+                        <p><strong>Productos:</strong> ${listaProductos}</p>
+                        <p><strong>Fecha:</strong> ${formatearFecha(pedido.fecha)}</p>
+                    </div>
+                    
+                    <div class="pedido-acciones">
+                        <select class="estado-pedido" data-pedido-id="${pedido.idPedido}">
+                            <option value="Pendiente" ${pedido.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                            <option value="En preparación" ${pedido.estado === 'En preparación' ? 'selected' : ''}>En preparación</option>
+                            <option value="Terminado" ${pedido.estado === 'Terminado' ? 'selected' : ''}>Terminado</option>
+                        </select>
+                        <button class="btn-actualizar" data-pedido-id="${pedido.idPedido}">Actualizar</button>
+                    </div>
+                </div>
+            `;
+
+                    contenedor.appendChild(divPedido);
+                });
+
+                // 8. Mostrar mensaje si no hay pedidos
+                if (!hayPedidos) {
+                    mostrarMensaje('No hay pedidos con hamburguesas o papas para preparar');
                 }
+
+                // 9. Agregar event listeners para los botones
+                agregarManejadoresEventos();
+
             } catch (error) {
-                console.error("Error al actualizar pedido:", error);
-                alert("Error al actualizar el pedido: " + error.message);
+                console.error('Error:', error);
+                mostrarMensaje('Error al cargar los pedidos. Por favor intenta nuevamente.', true);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', PedidosActivos);
+        // Funciones auxiliares
+        function formatearFecha(fechaString) {
+            if (!fechaString) return 'N/A';
+            try {
+                const fecha = new Date(fechaString);
+                return fecha.toLocaleString();
+            } catch {
+                return 'N/A';
+            }
+        }
+
+        function mostrarMensaje(texto, esError = false) {
+            // Limpiar mensajes anteriores
+            const mensajeAnterior = document.querySelector('.mensaje-pedidos');
+            if (mensajeAnterior) mensajeAnterior.remove();
+
+            // Crear nuevo mensaje
+            const mensaje = document.createElement('div');
+            mensaje.className = `mensaje-pedidos ${esError ? 'error' : ''}`;
+            mensaje.textContent = texto;
+
+            // Insertar después del título
+            const titulo = document.querySelector('h2') || document.body;
+            titulo.insertAdjacentElement('afterend', mensaje);
+        }
+
+        function agregarManejadoresEventos() {
+            // Manejador para botones de actualizar
+            document.querySelectorAll('.btn-actualizar').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const idPedido = this.dataset.pedidoId;
+                    const select = document.querySelector(`.estado-pedido[data-pedido-id="${idPedido}"]`);
+                    const estado = select.value;
+
+                    try {
+                        await actualizarEstadoPedido(idPedido, estado);
+                    } catch (error) {
+                        console.error('Error al actualizar:', error);
+                        mostrarMensaje('Error al actualizar el pedido', true);
+                    }
+                });
+            });
+        }
+
+        async function actualizarEstadoPedido(idPedido, estado) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                mostrarMensaje('Debes iniciar sesión para actualizar pedidos', true);
+                return;
+            }
+
+            const respuesta = await fetch(`/api/Cocina/ActualizarPedido/${idPedido}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ estado })
+            });
+
+            if (!respuesta.ok) {
+                throw new Error(`Error ${respuesta.status} al actualizar`);
+            }
+
+            mostrarMensaje(`Pedido #${idPedido} actualizado a: ${estado}`);
+
+            // Si el estado es "Terminado", remover el pedido de la vista
+            if (estado === 'Terminado') {
+                document.querySelector(`.pedido[data-id="${idPedido}"]`)?.remove();
+            }
+        }
+
+        // Iniciar cuando la página cargue
+        document.addEventListener('DOMContentLoaded', cargarPedidosActivos);
     </script>
 
 </body>

@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Repositories;
 
@@ -13,15 +15,18 @@ namespace RestauranteApi.Controllers
         private readonly Repository<Pedido> pedidoRepository;
         private readonly Repository<Pedidodetalle> detalleRepository;
         private readonly Repository<Pedidococina> cocinaRepository;
+        private readonly HamburguesaContext _context;
 
         public CocinaController(
             Repository<Pedido> pedidoRepository,
             Repository<Pedidodetalle> detalleRepository,
-            Repository<Pedidococina> cocinaRepository)
+            Repository<Pedidococina> cocinaRepository,
+            HamburguesaContext context)
         {
             this.pedidoRepository = pedidoRepository;
             this.detalleRepository = detalleRepository;
             this.cocinaRepository = cocinaRepository;
+            _context = context;
         }
 
         // 🔹 Obtener todos los pedidos activos con sus productos y estado
@@ -58,7 +63,7 @@ namespace RestauranteApi.Controllers
             return Ok(resultado);
         }
 
-        // 🔹 Cambiar estado de un producto
+
         [HttpPut("ActualizarEstado/{idDetalle}")]
         public IActionResult ActualizarEstado(int idDetalle, [FromQuery] string nuevoEstado)
         {
@@ -81,7 +86,7 @@ namespace RestauranteApi.Controllers
                 cocinaRepository.Update(cocina);
             }
 
-            // Verificar si todos los detalles del pedido están "Terminado"
+
             var detalle = detalleRepository.Get(idDetalle);
             if (detalle != null)
             {
@@ -103,6 +108,68 @@ namespace RestauranteApi.Controllers
             }
 
             return Ok("Estado actualizado correctamente.");
+        }
+        [HttpPost("AgregarProducto")]
+        public async Task<IActionResult> AgregarProducto([FromBody] TicketDetalleCrearDTO dto)
+        {
+            var pedido = await _context.Pedido.FindAsync(dto.IdPedido);
+            if (pedido == null)
+                return NotFound($"No existe pedido con Id {dto.IdPedido}");
+
+            decimal precioUnitario = 0m;
+
+            switch (dto.TipoProducto)
+            {
+                case "Hamburguesa":
+                    var hamburguesa = await _context.Hamburguesa.FindAsync(dto.IdProducto);
+                    if (hamburguesa == null)
+                        return NotFound($"No existe hamburguesa con Id {dto.IdProducto}");
+                    precioUnitario = hamburguesa.Precio ?? 0m;
+                    break;
+
+                case "Papas":
+                    var papas = await _context.Papas.FindAsync(dto.IdProducto);
+                    if (papas == null)
+                        return NotFound($"No existe papas con Id {dto.IdProducto}");
+                    precioUnitario = papas.Precio ?? 0m;
+                    break;
+
+                case "Refresco":
+                    var refresco = await _context.Refrescoprecio.FindAsync(dto.IdProducto);
+                    if (refresco == null)
+                        return NotFound($"No existe refresco con Id {dto.IdProducto}");
+                    precioUnitario = refresco.Precio ?? 0m;
+                    break;
+
+                default:
+                    return BadRequest("TipoProducto inválido. Debe ser: Hamburguesa, Papas o Refresco.");
+            }
+
+            var detalle = new Pedidodetalle
+            {
+                IdPedido = dto.IdPedido,
+                TipoProducto = dto.TipoProducto,
+                IdProducto = dto.IdProducto,
+                Cantidad = dto.Cantidad,
+                PrecioUnitario = precioUnitario
+            };
+
+            _context.Pedidodetalle.Add(detalle);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Mensaje = "Producto agregado correctamente",
+                Detalle = new DetalleRespuestaDTO
+                {
+                    IdDetalle = detalle.IdDetalle,
+                    IdPedido = (int)detalle.IdPedido,
+                    TipoProducto = detalle.TipoProducto,
+                    IdProducto = (int)detalle.IdProducto,
+                    Cantidad = (int)detalle.Cantidad,
+                    PrecioUnitario = (decimal)detalle.PrecioUnitario
+                }
+            });
         }
     }
 }

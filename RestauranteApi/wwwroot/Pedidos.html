@@ -58,84 +58,65 @@
     </style>
 </head>
 <body>
-
-    <div class="header-container">
-        <h1>Pedidos Agrupados por Mesa</h1>
-        <button class="boton-menu" onclick="irAMenu()">Ir al Menú</button>
-    </div>
+    <h1>Pedidos Agrupados por Mesa</h1>
+    <button onclick="location.href='Index.html'" style="margin-bottom: 20px;">Nuevo Pedido</button>
 
     <div id="contenedor-pedidos"></div>
 
     <script>
-        const API_BASE_URL = 'https://10.1.195.177:45456/api/Cocina';
-        const HUB_URL = 'https://10.1.195.177:45456/pedidosHub';
+        async function cargarPedidos() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("No hay sesión activa.");
+                window.location.href = "Login.html";
+                return;
+            }
+
+            try {
+                const response = await fetch("https://10.1.195.177:45456/api/Tickets/PedidosPorMesa", {
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                });
+
+                if (!response.ok) throw new Error("Error al obtener los pedidos.");
+
+                const pedidosPorMesa = await response.json();
+                const contenedor = document.getElementById("contenedor-pedidos");
+                contenedor.innerHTML = "";
+
+                pedidosPorMesa.forEach(mesa => {
+                    const divMesa = document.createElement("div");
+                    divMesa.className = "mesa";
+                    divMesa.innerHTML = `<h2>Mesa #${mesa.numMesa}</h2>`;
+
+                    mesa.tickets.forEach(ticket => {
+                        const platillos = ticket.detalles.map(d => d.tipoProducto).join(", ");
+                        const divPedido = document.createElement("div");
+                        divPedido.className = "pedido";
+                        divPedido.innerHTML = `
+                                <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
+                                <p><strong>Platillos:</strong> ${platillos}</p>
+                                <p><strong>Estado:</strong> ${ticket.estado}</p>
+                            `;
+                        divPedido.onclick = () => IrATicket(mesa.numMesa);
+                        divMesa.appendChild(divPedido);
+                    });
+
+                    contenedor.appendChild(divMesa);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar pedidos:", error);
+                alert("No se pudieron cargar los pedidos.");
+            }
+        }
 
         function IrATicket(mesa) {
             window.location.href = `Index.html?mesa=${mesa}`;
         }
 
-        function irAMenu() {
-            window.location.href = "Index.html";
-        }
-
-        async function obtenerPedidos() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/Pedidos`);
-                if (!response.ok) {
-                    throw new Error('Error al obtener los pedidos');
-                }
-                return await response.json();
-            } catch (error) {
-                console.error('Error:', error);
-                // Retornar datos de ejemplo si la API falla
-                return [
-                    { id: 1, mesa: "1", platillos: ["Hamburguesa", "Refresco"], estado: "Pendiente", mesero: "Ale", fecha: new Date() },
-                    { id: 2, mesa: "2", platillos: ["Papas", "Agua"], estado: "Preparación", mesero: "Juan", fecha: new Date() }
-                ];
-            }
-        }
-
-        // Función para renderizar los pedidos
-        async function renderizarPedidos() {
-            const pedidos = await obtenerPedidos();
-            const contenedor = document.getElementById("contenedor-pedidos");
-
-            // Limpiar contenedor
-            contenedor.innerHTML = '';
-
-            // Agrupar pedidos por número de mesa
-            const agrupadosPorMesa = pedidos.reduce((acc, pedido) => {
-                if (!acc[pedido.mesa]) acc[pedido.mesa] = [];
-                acc[pedido.mesa].push(pedido);
-                return acc;
-            }, {});
-
-            // Mostrar pedidos agrupados
-            for (const mesa in agrupadosPorMesa) {
-                const divMesa = document.createElement("div");
-                divMesa.className = "mesa";
-                divMesa.innerHTML = `<h2>Mesa #${mesa}</h2>`;
-
-                agrupadosPorMesa[mesa].forEach(pedido => {
-                    const divPedido = document.createElement("div");
-                    divPedido.className = "pedido";
-                    divPedido.onclick = () => IrATicket(mesa);
-                    divPedido.innerHTML = `
-                            <p><strong>Pedido ID:</strong> ${pedido.id}</p>
-                            <p><strong>Mesero:</strong> ${pedido.mesero || 'No especificado'}</p>
-                            <p><strong>Platillos:</strong> ${pedido.platillos ? pedido.platillos.join(", ") : 'No especificado'}</p>
-                            <p><strong>Estado:</strong> ${pedido.estado}</p>
-                            <p><strong>Hora:</strong> ${new Date(pedido.fecha).toLocaleTimeString()}</p>
-                        `;
-                    divMesa.appendChild(divPedido);
-                });
-
-                contenedor.appendChild(divMesa);
-            }
-        }
-
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', renderizarPedidos);
+        cargarPedidos();
     </script>
 </body>
 </html>

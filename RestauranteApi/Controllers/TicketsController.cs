@@ -66,30 +66,32 @@ public class TicketsController : ControllerBase
         var pedidos = await _context.Pedido
             .Where(p => p.Estado == "Pendiente" || p.Estado == "Activo")
             .Include(p => p.Pedidodetalle)
+            .Include(p => p.IdUsuarioNavigation)
             .ToListAsync();
 
         var pedidosPorMesa = pedidos
-            .GroupBy(p => p.NumMesa ?? 0)
-            .Select(g => new PedidoPorMesaDTO
-            {
-                NumMesa = g.Key,
-                Tickets = g.Select(p => new TicketRespuestaDTO
-                {
-                    IdPedido = p.IdPedido,
-                    Estado = p.Estado ?? "",
-                    Detalles = p.Pedidodetalle.Select(d => new DetalleRespuestaDTO
-                    {
-                        IdDetalle = d.IdDetalle,
-                        IdPedido = d.IdPedido ?? 0,
-                        TipoProducto = d.TipoProducto ?? "",
-                        IdProducto = d.IdProducto ?? 0,
-                        Cantidad = d.Cantidad ?? 0,
-                        PrecioUnitario = d.PrecioUnitario ?? 0m
-                    }).ToList()
-                }).ToList()
-            })
-            .OrderBy(m => m.NumMesa)
-            .ToList();
+         .GroupBy(p => p.NumMesa ?? 0)
+         .Select(g => new PedidoPorMesaDTO
+         {
+             NumMesa = g.Key,
+             Tickets = g.Select(p => new TicketRespuestaDTO
+             {
+                 IdPedido = p.IdPedido,
+                 Estado = p.Estado ?? "",
+                 NombreMesero = p.IdUsuarioNavigation?.Nombre ?? "Desconocido",
+                 Detalles = p.Pedidodetalle.Select(d => new DetalleRespuestaDTO
+                 {
+                     IdDetalle = d.IdDetalle,
+                     IdPedido = d.IdPedido ?? 0,
+                     TipoProducto = d.TipoProducto ?? "",
+                     IdProducto = d.IdProducto ?? 0,
+                     Cantidad = d.Cantidad ?? 0,
+                     PrecioUnitario = d.PrecioUnitario ?? 0m
+                 }).ToList()
+             }).ToList()
+         })
+         .OrderBy(m => m.NumMesa)
+         .ToList();
 
         return Ok(pedidosPorMesa);
     }

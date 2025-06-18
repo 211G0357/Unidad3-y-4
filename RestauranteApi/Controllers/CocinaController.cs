@@ -44,53 +44,30 @@ namespace RestauranteApi.Controllers
             var pedidos = await _context.Pedido
                 .Where(p => p.Estado != "Terminado")
                 .Include(p => p.Pedidodetalle)
+                    .ThenInclude(d => d.Pedidococina)
                 .OrderBy(p => p.Fecha)
-                .Select(p => new
+                .Select(p => new PedidoCocinaDTO
                 {
-                    p.IdPedido,
-                    p.NumMesa,
-                    p.Fecha,
-                    p.Estado,
-                    Detalles = p.Pedidodetalle.Select(d => new
-                    {
-                        d.IdDetalle,
-                        d.TipoProducto,
-                        d.IdProducto,
-                        d.Cantidad,
-                        EstadoCocina = _context.Pedidococina
-                            .Where(pc => pc.IdDetalle == d.IdDetalle)
-                            .Select(pc => pc.Estado)
-                            .FirstOrDefault() ?? "No aplica",
-                        Producto = d.TipoProducto == "Hamburguesa"
-                            ? _context.Hamburguesa
-                                .Where(h => h.IdHamburguesa == d.IdProducto)
-                                .Select(h => h.Categoria)
-                                .FirstOrDefault() ?? "Hamburguesa"
-                            : d.TipoProducto == "Papas"
-                                ? _context.Papas
-                                    .Where(p => p.IdPapas == d.IdProducto)
-                                    .Select(p => p.Categoria)
-                                    .FirstOrDefault() ?? "Papas"
-                                : "Refresco",
-                        PrecioUnitario = d.TipoProducto == "Hamburguesa"
-                            ? _context.Hamburguesa
-                                .Where(h => h.IdHamburguesa == d.IdProducto)
-                                .Select(h => h.Precio)
-                                .FirstOrDefault() ?? 0
-                            : d.TipoProducto == "Papas"
-                                ? _context.Papas
-                                    .Where(p => p.IdPapas == d.IdProducto)
-                                    .Select(p => p.Precio)
-                                    .FirstOrDefault() ?? 0
-                                : _context.Refrescoprecio
-                                    .Where(r => r.Id == d.IdProducto)
-                                    .Select(r => r.Precio)
-                                    .FirstOrDefault() ?? 0
-                    })
+                    IdPedido = p.IdPedido,
+                    NumMesa = p.NumMesa,
+                    Fecha = p.Fecha,
+                    Estado = p.Estado,
+                    Productos = p.Pedidodetalle
+                        .Where(d => d.TipoProducto == "Hamburguesa" || d.TipoProducto == "Papas")
+                        .Select(d => new ProductoCocinaDTO
+                        {
+                            IdDetalle = d.IdDetalle,
+                            Tipo = d.TipoProducto,
+                            Nombre = d.TipoProducto == "Hamburguesa"
+                                ? _context.Hamburguesa.FirstOrDefault(h => h.IdHamburguesa == d.IdProducto).Categoria
+                                : _context.Papas.FirstOrDefault(pa => pa.IdPapas == d.IdProducto).Categoria,
+                            Cantidad = (int)d.Cantidad,
+                            Estado = d.Pedidococina.FirstOrDefault().Estado ?? "Pendiente"
+                        }).ToList()
                 })
                 .ToListAsync();
 
-            return Ok(pedidos);
+            return Ok(pedidos.Where(p => p.Productos.Any()));
         }
 
         [HttpPut("ActualizarEstado/{idDetalle}")]

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
@@ -45,10 +46,15 @@ builder.Services.AddScoped<TicketDetalleValidator>();
 builder.Services.AddControllers();
 builder.Services.AddCors(x =>
 {
-    x.AddPolicy("todos", builder =>
-    {
-        builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-    });
+    x.AddPolicy("todos",
+        policy =>
+        {
+            policy
+                .WithOrigins("https://localhost:44349", "https://192.168.1.72:45455")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+            .AllowCredentials();
+        });
 });
 
 var app = builder.Build();

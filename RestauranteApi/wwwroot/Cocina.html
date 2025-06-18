@@ -20,60 +20,49 @@
         }
 
         .pedido {
-            border-radius: 10px;
-            background-color: #f4f4f4;
-            padding: 20px;
-            margin-bottom: 10px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            font-family: "Poppins", sans-serif;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
 
         .pedido-row {
             display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
             .pedido-row label {
-                width: 100px;
                 font-weight: bold;
-                font-size: 16px;
-                margin: 0;
+                width: 120px;
             }
 
-            .pedido-row p,
-            .pedido-row {
-                margin: 0;
-                padding: 4px;
-                font-size: 16px;
-                flex: 1;
-                width: 50%;
-            }
-
-        select {
-            padding: 12px;
-            border: 1px solid #ccc;
-            background-color: white;
-            border-radius: 10px;
-            font-size: 16px;
+        .producto-item {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
         }
 
         button {
-            padding: 12px;
-            margin-top: 20px;
-            width: 25%;
             background-color: #4CAF50;
             color: white;
+            padding: 8px 12px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 4px;
             cursor: pointer;
-            justify-content: center;
+            margin-top: 10px;
         }
 
             button:hover {
                 background-color: #45a049;
             }
+
+        select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
@@ -104,23 +93,198 @@
         <button onclick="alert('Pedido actualizado')">Actualizar</button>
     </div>
 
-    <script>function actualizarPedido(id) {
-            const estado = document.getElementById(`estadoPedido${id}`).value;
+    <script>
+        function PedidosActivos() {
+            const token = localStorage.getItem('token');
 
-            fetch(`/actualizarPedido`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: id, estado: estado })
+            if (!token) {
+                alert('No estás autenticado. Por favor inicia sesión.');
+                window.location.href = '/login';
+                return;
+            }
+
+            fetch('/api/Cocina/PedidosActivos', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             })
-                .then(response => response.json())
-                .then(data => {
-                    alert(`Pedido ${id} actualizado a: ${estado}`);
-
-                    // Borrar el pedido de la página después de actualizar
-                    document.getElementById(`pedido${id}`).remove();
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('Sesión expirada o no autorizada');
+                        window.location.href = '/login';
+                        return Promise.reject('Unauthorized');
+                    }
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
                 })
-                .catch(error => console.error("Error al actualizar pedido:", error));
-        }</script>
+                .then(pedidos => {
+                    console.log('Datos recibidos:', pedidos); // Para depuración
+
+                    const contenedorPedidos = document.querySelector('body');
+
+                    // Limpiar pedidos existentes (excepto el título)
+                    document.querySelectorAll('.pedido').forEach(pedido => pedido.remove());
+
+                    // Verificar si hay pedidos
+                    if (!pedidos || !Array.isArray(pedidos)) {
+                        console.warn('La respuesta no contiene un array de pedidos:', pedidos);
+                        mostrarMensaje('No hay pedidos activos en este momento');
+                        return;
+                    }
+
+                    // Contador para pedidos válidos
+                    let pedidosMostrados = 0;
+
+                    // Crear elementos para cada pedido
+                    pedidos.forEach(pedido => {
+                        // Validación básica del objeto pedido
+                        if (!pedido || typeof pedido !== 'object') {
+                            console.warn('Pedido inválido:', pedido);
+                            return;
+                        }
+
+                        // Verificar que el pedido tenga ID
+                        const pedidoId = pedido.IdPedido || 'N/A';
+
+                        // Verificar que el pedido tenga detalles
+                        if (!pedido.Detalles || !Array.isArray(pedido.Detalles)) {
+                            console.warn(`Pedido ${pedidoId} no tiene detalles válidos:`, pedido);
+                            return;
+                        }
+
+                        // Filtrar solo los productos de cocina (hamburguesas y papas)
+                        const productosCocina = pedido.Detalles.filter(d =>
+                            d && d.TipoProducto && (d.TipoProducto === 'Hamburguesa' || d.TipoProducto === 'Papas')
+                        );
+
+                        // Si no hay productos de cocina en este pedido, no lo mostramos
+                        if (productosCocina.length === 0) {
+                            console.log(`Pedido ${pedidoId} no contiene productos para cocina`);
+                            return;
+                        }
+
+                        // Crear HTML del pedido
+                        const divPedido = document.createElement('div');
+                        divPedido.className = 'pedido';
+                        divPedido.id = `pedido${pedidoId}`;
+
+                        divPedido.innerHTML = `
+                <p><strong>Pedido #${pedidoId}</strong></p>
+                <div class="pedido-row">
+                    <label>Mesa:</label>
+                    <p>${pedido.NumMesa || 'N/A'}</p>
+                </div>
+                <div class="pedido-row">
+                    <label>Estado general:</label>
+                    <p>${pedido.Estado || 'Pendiente'}</p>
+                </div>
+                <div class="pedido-row">
+                    <label>Fecha:</label>
+                    <p>${pedido.Fecha ? new Date(pedido.Fecha).toLocaleString() : 'N/A'}</p>
+                </div>
+                <hr>
+                <h4>Productos para preparar:</h4>
+                ${productosCocina.map(detalle => `
+                    <div class="producto-item" id="detalle${detalle.IdDetalle || ''}">
+                        <div class="pedido-row">
+                            <label>Tipo:</label>
+                            <p>${detalle.TipoProducto || 'Producto'}</p>
+                        </div>
+                        <div class="pedido-row">
+                            <label>Producto:</label>
+                            <p>${detalle.Producto || 'Producto'} (${detalle.Cantidad || 1}x)</p>
+                        </div>
+                        <div class="pedido-row">
+                            <label>Estado:</label>
+                            <select id="estadoPedido${detalle.IdDetalle || ''}">
+                                <option value="Pendiente" ${(detalle.EstadoCocina || 'Pendiente') === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                                <option value="En preparación" ${(detalle.EstadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
+                                <option value="Terminado" ${(detalle.EstadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
+                            </select>
+                        </div>
+                        <button onclick="actualizarPedido(${detalle.IdDetalle || ''})">Actualizar estado</button>
+                        <hr>
+                    </div>
+                `).join('')}
+            `;
+
+                        contenedorPedidos.appendChild(divPedido);
+                        pedidosMostrados++;
+                    });
+
+                    if (pedidosMostrados === 0) {
+                        mostrarMensaje('No hay pedidos con productos para preparar');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (error !== 'Unauthorized') {
+                        mostrarMensaje('Error al cargar los pedidos activos');
+                    }
+                });
+        }
+
+        function mostrarMensaje(texto) {
+            const mensajeDiv = document.createElement('div');
+            mensajeDiv.className = 'mensaje-info';
+            mensajeDiv.textContent = texto;
+            document.querySelector('body').appendChild(mensajeDiv);
+        }
+
+        async function actualizarPedido(idDetalle) {
+            try {
+                const estado = document.getElementById(`estadoPedido${idDetalle}`).value;
+                const token = localStorage.getItem('token');
+
+                if (!token) {
+                    throw new Error('No autenticado');
+                }
+
+                const response = await fetch(`/api/Cocina/ActualizarEstado/${idDetalle}?nuevoEstado=${encodeURIComponent(estado)}`, {
+                    method: "PUT",
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                alert(`Estado actualizado a: ${estado}`);
+
+                if (estado === "Terminado") {
+                    const elemento = document.getElementById(`detalle${idDetalle}`);
+                    if (elemento) elemento.remove();
+
+                    // Verificar si el pedido quedó vacío
+                    const pedidoId = elemento?.closest('.pedido')?.id?.replace('pedido', '');
+                    if (pedidoId) {
+                        const productosRestantes = document.querySelectorAll(`#pedido${pedidoId} .producto-item`).length;
+                        if (productosRestantes === 0) {
+                            document.getElementById(`pedido${pedidoId}`)?.remove();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error al actualizar pedido:", error);
+                alert("Error al actualizar el pedido: " + error.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', PedidosActivos);
+    </script>
 
 </body>
 </html>

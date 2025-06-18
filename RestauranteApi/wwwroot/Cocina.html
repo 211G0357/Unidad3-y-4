@@ -126,195 +126,300 @@
 
         <button onclick="alert('Pedido actualizado')">Actualizar</button>
     </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
-        async function cargarPedidosActivos() {
+        const API_BASE_URL = 'https://192.168.1.72:45455/api';
+        const HUB_URL = 'https://192.168.1.72:45455/ticketHub';
+        const gridPedidos = document.getElementById('grid-pedidos');
+        let connection;
+
+        // Función principal para cargar pedidos
+        async function cargarPedidos() {
             try {
-                // 1. Obtener token de autenticación
-                const token = localStorage.getItem('token');
+                console.log('Cargando pedidos desde:', `${API_BASE_URL}/Cocina/PedidosActivos`);
+                const token = sessionStorage.getItem('token');
+
                 if (!token) {
-                    mostrarMensaje('Debes iniciar sesión para ver los pedidos', true);
+                    mostrarError('No se encontró token de autenticación');
                     return;
                 }
 
-                // 2. Hacer la petición al backend
-                const respuesta = await fetch('/api/Cocina/PedidosActivos', {
+                const res = await fetch(`${API_BASE_URL}/Cocina/PedidosActivos`, {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${token}`
                     }
                 });
 
-                // 3. Verificar respuesta
-                if (respuesta.status === 401) {
-                    mostrarMensaje('Sesión expirada. Por favor inicia sesión nuevamente.', true);
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => null);
+                    const errorMsg = errorData?.message || `Error ${res.status} al cargar pedidos`;
+                    mostrarError(errorMsg);
                     return;
                 }
 
-                if (!respuesta.ok) {
-                    throw new Error(`Error ${respuesta.status} al obtener pedidos`);
-                }
+                const pedidos = await res.json();
+                console.log('Pedidos recibidos:', pedidos);
 
-                // 4. Procesar los pedidos recibidos
-                const pedidos = await respuesta.json();
-                console.log('Datos recibidos:', pedidos);
-
-                // 5. Limpiar vista anterior
-                const contenedor = document.getElementById('contenedor-pedidos') || document.body;
-                contenedor.querySelectorAll('.pedido').forEach(p => p.remove());
-
-                // 6. Verificar si hay pedidos
                 if (!pedidos || !Array.isArray(pedidos)) {
-                    mostrarMensaje('Formato de datos incorrecto', true);
+                    mostrarError('Formato de datos inválido');
                     return;
                 }
 
-                // 7. Filtrar y mostrar pedidos
-                let hayPedidos = false;
-
-                pedidos.forEach(pedido => {
-                    // Verificar estructura del pedido
-                    if (!pedido || !pedido.idPedido || !Array.isArray(pedido.detalles)) {
-                        console.warn('Pedido con estructura inválida:', pedido);
-                        return;
-                    }
-
-                    // Filtrar solo productos de cocina (Hamburguesas y Papas)
-                    const productosCocina = pedido.detalles.filter(detalle => {
-                        return detalle &&
-                            detalle.TipoProducto &&
-                            ['Hamburguesa', 'Papas'].includes(detalle.TipoProducto);
-                    });
-
-                    if (productosCocina.length === 0) return;
-
-                    hayPedidos = true;
-
-                    // Crear elemento HTML para el pedido
-                    const divPedido = document.createElement('div');
-                    divPedido.className = 'pedido';
-                    divPedido.dataset.id = pedido.idPedido;
-
-                    // Crear lista de productos
-                    const listaProductos = productosCocina.map(p =>
-                        `${p.Producto || p.TipoProducto} (${p.Cantidad || 1}x)`
-                    ).join(', ');
-
-                    // Estructura HTML (similar a tu diseño original)
-                    divPedido.innerHTML = `
-                <div class="pedido-header">
-                    <h3>Pedido #${pedido.idPedido}</h3>
-                    <span class="mesa">Mesa ${pedido.numMesa || 'N/A'}</span>
-                </div>
-                
-                <div class="pedido-body">
-                    <div class="pedido-info">
-                        <p><strong>Productos:</strong> ${listaProductos}</p>
-                        <p><strong>Fecha:</strong> ${formatearFecha(pedido.fecha)}</p>
-                    </div>
-                    
-                    <div class="pedido-acciones">
-                        <select class="estado-pedido" data-pedido-id="${pedido.idPedido}">
-                            <option value="Pendiente" ${pedido.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                            <option value="En preparación" ${pedido.estado === 'En preparación' ? 'selected' : ''}>En preparación</option>
-                            <option value="Terminado" ${pedido.estado === 'Terminado' ? 'selected' : ''}>Terminado</option>
-                        </select>
-                        <button class="btn-actualizar" data-pedido-id="${pedido.idPedido}">Actualizar</button>
-                    </div>
-                </div>
-            `;
-
-                    contenedor.appendChild(divPedido);
-                });
-
-                // 8. Mostrar mensaje si no hay pedidos
-                if (!hayPedidos) {
-                    mostrarMensaje('No hay pedidos con hamburguesas o papas para preparar');
-                }
-
-                // 9. Agregar event listeners para los botones
-                agregarManejadoresEventos();
-
+                mostrarPedidos(pedidos);
             } catch (error) {
-                console.error('Error:', error);
-                mostrarMensaje('Error al cargar los pedidos. Por favor intenta nuevamente.', true);
+                console.error('Error al cargar pedidos:', error);
+                mostrarError(`Error: ${error.message}`);
             }
         }
 
-        // Funciones auxiliares
-        function formatearFecha(fechaString) {
-            if (!fechaString) return 'N/A';
-            try {
-                const fecha = new Date(fechaString);
-                return fecha.toLocaleString();
-            } catch {
-                return 'N/A';
-            }
-        }
+        // Función para mostrar los pedidos en la vista
+        function mostrarPedidos(pedidos) {
+            gridPedidos.innerHTML = '';
 
-        function mostrarMensaje(texto, esError = false) {
-            // Limpiar mensajes anteriores
-            const mensajeAnterior = document.querySelector('.mensaje-pedidos');
-            if (mensajeAnterior) mensajeAnterior.remove();
+            const pedidosFiltrados = pedidos
+                .filter(p => p.productos && p.productos.length > 0 && p.estado !== "Entregado")
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-            // Crear nuevo mensaje
-            const mensaje = document.createElement('div');
-            mensaje.className = `mensaje-pedidos ${esError ? 'error' : ''}`;
-            mensaje.textContent = texto;
-
-            // Insertar después del título
-            const titulo = document.querySelector('h2') || document.body;
-            titulo.insertAdjacentElement('afterend', mensaje);
-        }
-
-        function agregarManejadoresEventos() {
-            // Manejador para botones de actualizar
-            document.querySelectorAll('.btn-actualizar').forEach(btn => {
-                btn.addEventListener('click', async function () {
-                    const idPedido = this.dataset.pedidoId;
-                    const select = document.querySelector(`.estado-pedido[data-pedido-id="${idPedido}"]`);
-                    const estado = select.value;
-
-                    try {
-                        await actualizarEstadoPedido(idPedido, estado);
-                    } catch (error) {
-                        console.error('Error al actualizar:', error);
-                        mostrarMensaje('Error al actualizar el pedido', true);
-                    }
-                });
-            });
-        }
-
-        async function actualizarEstadoPedido(idPedido, estado) {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                mostrarMensaje('Debes iniciar sesión para actualizar pedidos', true);
+            if (pedidosFiltrados.length === 0) {
+                gridPedidos.innerHTML = `
+            <div class="mensaje-info">
+              <h3>No hay pedidos pendientes</h3>
+              <p>Los pedidos aparecerán aquí cuando se realicen.</p>
+            </div>`;
                 return;
             }
 
-            const respuesta = await fetch(`/api/Cocina/ActualizarPedido/${idPedido}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ estado })
+            pedidosFiltrados.forEach(pedido => {
+                const divPedido = crearElementoPedido(pedido);
+                gridPedidos.appendChild(divPedido);
             });
+        }
 
-            if (!respuesta.ok) {
-                throw new Error(`Error ${respuesta.status} al actualizar`);
-            }
+        // Función para crear el HTML de un pedido
+        function crearElementoPedido(pedido) {
+            const divPedido = document.createElement('div');
+            divPedido.className = 'pedido';
+            divPedido.id = `pedido-${pedido.id}`;
 
-            mostrarMensaje(`Pedido #${idPedido} actualizado a: ${estado}`);
+            const productosHTML = pedido.productos.map(producto => `
+          <div class="producto-item" id="producto-${producto.id}">
+            <div class="producto-info">
+              <div>${producto.cantidad}x ${producto.nombreProducto}</div>
+              <small>Estado:
+                <span class="estado estado-${(producto.estado || 'Pendiente').toLowerCase().replace(' ', '')}">
+                  ${producto.estado || 'Pendiente'}
+                </span>
+              </small>
+            </div>
+            <div class="producto-acciones">
+              <button class="btn btn-preparacion"
+                onclick="actualizarEstadoProducto(${producto.id}, 'En preparacion')"
+                ${(producto.estado || 'Pendiente') === 'En preparacion' ? 'disabled' : ''}>
+                🔄 En Preparación
+              </button>
+              <button class="btn btn-listo"
+                onclick="actualizarEstadoProducto(${producto.id}, 'Listo')"
+                ${(producto.estado || 'Pendiente') === 'Listo' ? 'disabled' : ''}>
+                ✓ Listo
+              </button>
+            </div>
+          </div>
+        `).join('');
 
-            // Si el estado es "Terminado", remover el pedido de la vista
-            if (estado === 'Terminado') {
-                document.querySelector(`.pedido[data-id="${idPedido}"]`)?.remove();
+            divPedido.innerHTML = `
+          <h3>Mesa ${pedido.numeroMesa || 'N/A'}</h3>
+          <div class="hora">
+            Fecha: ${pedido.fecha ? new Date(pedido.fecha).toLocaleString() : 'N/A'}
+            <span class="estado estado-${(pedido.estado || 'Pendiente').toLowerCase()}">
+              ${pedido.estado || 'Pendiente'}
+            </span>
+          </div>
+          <div class="productos">
+            ${productosHTML}
+          </div>
+        `;
+
+            return divPedido;
+        }
+
+        // Función para actualizar estado de producto
+        async function actualizarEstadoProducto(productoId, nuevoEstado) {
+            try {
+                const token = sessionStorage.getItem('token');
+                if (!token) {
+                    mostrarError('No autenticado');
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/tickets/productos/${productoId}/estado`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Error al actualizar el estado');
+                }
+
+                // Actualizar UI localmente mientras esperamos la confirmación del hub
+                const productoElement = document.getElementById(`producto-${productoId}`);
+                if (productoElement) {
+                    const estadoElement = productoElement.querySelector('.estado');
+                    estadoElement.className = `estado estado-${nuevoEstado.toLowerCase().replace(' ', '')}`;
+                    estadoElement.textContent = nuevoEstado;
+
+                    productoElement.querySelectorAll('button').forEach(btn => {
+                        btn.disabled = true; // Deshabilitar mientras se confirma
+                    });
+                }
+            } catch (error) {
+                console.error('Error al actualizar producto:', error);
+                mostrarError(error.message);
             }
         }
 
-        // Iniciar cuando la página cargue
-        document.addEventListener('DOMContentLoaded', cargarPedidosActivos);
+        // Función para mostrar errores
+        function mostrarError(mensaje) {
+            gridPedidos.innerHTML = `
+          <div class="error-message">
+            <h3>Error del Sistema</h3>
+            <p>${mensaje}</p>
+          </div>`;
+        }
+
+        // Conexión SignalR
+        async function iniciarConexion() {
+            try {
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(HUB_URL, {
+                        accessTokenFactory: () => sessionStorage.getItem('token')
+                    })
+                    .withAutomaticReconnect({
+                        nextRetryDelayInMilliseconds: retryContext => {
+                            return Math.min(retryContext.elapsedMilliseconds * 2, 10000);
+                        }
+                    })
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                // Manejar eventos del hub
+                connection.on("NuevoTicket", ticket => {
+                    console.log("Nuevo ticket recibido:", ticket);
+                    if (ticket.productos?.length > 0 && ticket.estado !== "Entregado") {
+                        const pedidoExistente = document.getElementById(`pedido-${ticket.id}`);
+                        if (pedidoExistente) pedidoExistente.remove();
+
+                        const nuevoPedido = crearElementoPedido(ticket);
+                        insertarPedidoEnOrden(nuevoPedido, ticket.fecha);
+                    }
+                });
+
+                connection.on("TicketEntregado", ticket => {
+                    console.log("Ticket entregado:", ticket);
+                    eliminarTicketDeVista(ticket.id);
+                });
+
+                connection.on("ActualizacionTicket", ticket => {
+                    console.log("Ticket actualizado:", ticket);
+                    if (ticket.estado === "Entregado") {
+                        eliminarTicketDeVista(ticket.id);
+                    } else if (ticket.productos?.length > 0) {
+                        const pedidoExistente = document.getElementById(`pedido-${ticket.id}`);
+                        if (pedidoExistente) pedidoExistente.remove();
+
+                        const nuevoPedido = crearElementoPedido(ticket);
+                        insertarPedidoEnOrden(nuevoPedido, ticket.fecha);
+                    }
+                });
+
+                connection.on("ActualizacionProducto", producto => {
+                    console.log("Producto actualizado:", producto);
+                    const productoElement = document.getElementById(`producto-${producto.id}`);
+                    if (productoElement) {
+                        const estadoElement = productoElement.querySelector('.estado');
+                        estadoElement.className = `estado estado-${producto.estado.toLowerCase().replace(' ', '')}`;
+                        estadoElement.textContent = producto.estado;
+
+                        productoElement.querySelectorAll('button').forEach(btn => {
+                            btn.disabled = false; // Rehabilitar botones
+                        });
+                    }
+                });
+
+                connection.onclose(async () => {
+                    console.log("Conexión cerrada. Intentando reconectar...");
+                    await reconectar();
+                });
+
+                await connection.start();
+                console.log("Conectado al hub");
+                await cargarPedidos();
+            } catch (error) {
+                console.error("Error al conectar con el hub:", error);
+                await reconectar();
+            }
+        }
+
+        // Función para reconexión
+        async function reconectar() {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                await iniciarConexion();
+            } catch (error) {
+                console.error("Error al reconectar:", error);
+                await reconectar();
+            }
+        }
+
+        // Función auxiliar para insertar pedidos ordenados
+        function insertarPedidoEnOrden(nuevoPedido, fecha) {
+            const pedidos = Array.from(gridPedidos.children);
+            const nuevaFecha = new Date(fecha);
+
+            for (let i = 0; i < pedidos.length; i++) {
+                const fechaExistente = new Date(
+                    pedidos[i].querySelector('.hora').textContent.split('Fecha: ')[1]
+                );
+
+                if (nuevaFecha < fechaExistente) {
+                    gridPedidos.insertBefore(nuevoPedido, pedidos[i]);
+                    return;
+                }
+            }
+
+            gridPedidos.appendChild(nuevoPedido);
+        }
+
+        // Función para eliminar pedidos de la vista
+        function eliminarTicketDeVista(ticketId) {
+            const pedidoElement = document.getElementById(`pedido-${ticketId}`);
+            if (pedidoElement) {
+                pedidoElement.style.transition = 'opacity 0.5s ease-out';
+                pedidoElement.style.opacity = '0';
+                setTimeout(() => {
+                    pedidoElement.remove();
+                    if (gridPedidos.children.length === 0) {
+                        gridPedidos.innerHTML = `
+                <div class="mensaje-info">
+                  <h3>No hay pedidos pendientes</h3>
+                  <p>Los pedidos aparecerán aquí cuando se realicen.</p>
+                </div>`;
+                    }
+                }, 500);
+            }
+        }
+
+        // Iniciar la aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            iniciarConexion();
+
+            // Recargar cada 5 minutos por si hay problemas de conexión
+            setInterval(cargarPedidos, 300000);
+        });
     </script>
 
 </body>

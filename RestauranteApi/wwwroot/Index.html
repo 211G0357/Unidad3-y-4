@@ -275,6 +275,10 @@
             }
         }
 
+        const params = new URLSearchParams(window.location.search);
+        const mesa = params.get("mesa");
+        console.log("Número de mesa recibido:", mesa);
+
         // Refrescos
         const sabores = ['Naranja', 'Fresa', 'Coca'];
         let saborBase = '';

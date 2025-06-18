@@ -249,6 +249,17 @@
             ticket.length = 0;
             renderTicket();
         }
+        // Guardar el pedido
+        const pedido = {
+            mesa: mesaInput.value,
+            platillos: ["Hamburguesa", "Papas"],
+            estado: "Pendiente"
+        };
+
+        let pedidos = JSON.parse(localStorage.getItem("todosLosPedidos")) || [];
+        pedidos.push(pedido);
+        localStorage.setItem("todosLosPedidos", JSON.stringify(pedidos));
+
 
         function Finalizar() {
             if (ticket.length === 0) {

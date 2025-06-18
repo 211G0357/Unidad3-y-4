@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pedidos por Mesa</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background-color: #8DBCC7;
+            padding: 20px;
+        }
+
+        .mesa {
+            background-color: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+
+            .mesa h2 {
+                color: #00809D;
+            }
+
+        .pedido {
+            border-bottom: 1px solid #8CCDEB;
+            padding: 8px 0;
+        }
+
+            .pedido:last-child {
+                border-bottom: none;
+            }
+    </style>
+</head>
+<body>
+
+    <h1>Pedidos Agrupados por Mesa</h1>
+    <div id="contenedor-pedidos"></div>
+
+    <script>
+        const pedidos = JSON.parse(localStorage.getItem("todosLosPedidos")) || [
+            { mesa: "1", platillos: ["Hamburguesa", "Refresco"], estado: "Pendiente" },
+            { mesa: "2", platillos: ["Papas", "Agua"], estado: "Preparación" },
+            { mesa: "1", platillos: ["Hot Dog"], estado: "Pendiente" }
+        ];
+
+        // Agrupar pedidos por número de mesa
+        const agrupadosPorMesa = pedidos.reduce((acc, pedido) => {
+            if (!acc[pedido.mesa]) acc[pedido.mesa] = [];
+            acc[pedido.mesa].push(pedido);
+            return acc;
+        }, {});
+
+        // Mostrar pedidos agrupados
+        const contenedor = document.getElementById("contenedor-pedidos");
+        for (const mesa in agrupadosPorMesa) {
+            const divMesa = document.createElement("div");
+            divMesa.className = "mesa";
+            divMesa.innerHTML = `<h2>Mesa #${mesa}</h2>`;
+
+            agrupadosPorMesa[mesa].forEach(pedido => {
+                const divPedido = document.createElement("div");
+                divPedido.className = "pedido";
+                divPedido.innerHTML = `
+                        <p><strong>Platillos:</strong> ${pedido.platillos.join(", ")}</p>
+                        <p><strong>Estado:</strong> ${pedido.estado}</p>
+                    `;
+                divMesa.appendChild(divPedido);
+            });
+
+            contenedor.appendChild(divMesa);
+        }</script>
+</body>
+</html>

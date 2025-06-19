@@ -95,77 +95,61 @@ public class TicketsController : ControllerBase
 
         return Ok(pedidosPorMesa);
     }
-    [Authorize(Roles = "Mesero")]
     [HttpPost("CrearTicketConDetalles")]
-    public async Task<IActionResult> CrearTicketConDetalles([FromBody] CrearTicketConDetallesDTO dto)
+    public IActionResult CrearTicketConDetalles([FromBody] CrearTicketConDetallesDTO dto)
     {
-        // 1. Validaciones básicas
-        if (dto == null) return BadRequest("Datos no proporcionados");
-        if (dto.NumMesa <= 0) return BadRequest("Mesa inválida");
         if (dto.Detalles == null || !dto.Detalles.Any())
-            return BadRequest("Debe incluir al menos un producto");
+            return BadRequest("Debe incluir al menos un producto.");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        var idMesero = int.Parse(User.FindFirst("IdUsuario")?.Value ?? "0");
 
-        try
+        // Validar si ya existe un ticket activo en esa mesa
+        var yaExiste = ticketRepository.GetAll()
+            .Any(t => t.NumMesa == dto.NumMesa && t.Estado == "Pendiente");
+
+        if (yaExiste)
+            return BadRequest($"Ya existe un ticket activo para la mesa {dto.NumMesa}");
+
+        // Crear el ticket (pedido)
+        var nuevo = new Pedido
         {
-            // 2. Crear el pedido principal
-            var pedido = new Pedido
+            NumMesa = dto.NumMesa,
+            Fecha = DateTime.Now,
+            IdUsuario = idMesero,
+            Estado = "Pendiente"
+        };
+
+        ticketRepository.Insert(nuevo);
+
+        // Guardar los detalles
+        foreach (var detalle in dto.Detalles)
+        {
+            var nuevoDetalle = new Pedidodetalle
             {
-                NumMesa = dto.NumMesa,
-                Fecha = DateTime.Now,
-                IdUsuario = int.Parse(User.FindFirst("IdUsuario")?.Value ?? "0"),
-                Estado = "Pendiente"
+                IdPedido = nuevo.IdPedido,
+                TipoProducto = detalle.TipoProducto,
+                IdProducto = detalle.IdProducto,
+                Cantidad = detalle.Cantidad,
+                PrecioUnitario = detalle.PrecioUnitario
             };
 
-            _context.Pedido.Add(pedido);
-            await _context.SaveChangesAsync(); // Guardar para obtener el ID
+            _context.Pedidodetalle.Add(nuevoDetalle);
 
-            // 3. Procesar detalles
-            foreach (var detalleDto in dto.Detalles)
+            // Si es hamburguesa o papas, agregamos registro a cocina
+            if (detalle.TipoProducto.Contains("Hamburguesa") || detalle.TipoProducto.Contains("Papas"))
             {
-                var detalle = new Pedidodetalle
+                _context.Pedidococina.Add(new Pedidococina
                 {
-                    IdPedido = pedido.IdPedido,
-                    TipoProducto = detalleDto.TipoProducto,
-                    IdProducto = detalleDto.IdProducto,
-                    Cantidad = detalleDto.Cantidad,
-                    PrecioUnitario = detalleDto.PrecioUnitario
-                };
-
-                _context.Pedidodetalle.Add(detalle);
-                await _context.SaveChangesAsync(); // Guardar para obtener IdDetalle
-
-                // 4. Solo para productos de cocina
-                if (detalleDto.TipoProducto == "Hamburguesa" || detalleDto.TipoProducto == "Papas")
-                {
-                    var pedidoCocina = new Pedidococina
-                    {
-                        IdDetalle = detalle.IdDetalle, // Usa el ID ya generado
-                        Estado = "Pendiente"
-                    };
-                    _context.Pedidococina.Add(pedidoCocina);
-                }
+                    IdDetalleNavigation = nuevoDetalle,
+                    Estado = "Pendiente"
+                });
             }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-           
-            return Ok(new
-            {
-                mensaje = "Ticket creado",
-                idPedido = pedido.IdPedido,
-                detalles = dto.Detalles.Count
-            });
         }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            return StatusCode(500, $"Error al crear ticket: {ex.Message}");
-        }
+
+        _context.SaveChanges();
+
+        return Ok(new { mensaje = "Ticket creado correctamente", nuevo.IdPedido });
     }
-
     [Authorize(Roles = "Mesero,Cocinero")]
     [HttpGet("get")]
     public IActionResult Get()
@@ -222,76 +206,8 @@ public class TicketsController : ControllerBase
         };
 
         repository.Insert(pedido);
+        // Aquí podrías insertar los detalles del pedido si vienen incluidos en el DTO
 
         return Ok();
     }
-    [Authorize(Roles = "Cocinero")]
-    [HttpPut("ActualizarEstadoCocina/{idDetalle}")]
-    public IActionResult ActualizarEstadoCocina(int idDetalle, [FromBody] ActualizarEstadoDTO dto)
-    {
-        // 1. Buscar el detalle con su relación a cocina
-        var detalle = _context.Pedidodetalle
-            .Include(d => d.Pedidococina) // Asegúrate de incluir la relación
-            .FirstOrDefault(d => d.IdDetalle == idDetalle);
-
-        if (detalle == null)
-            return NotFound("Detalle de pedido no encontrado");
-
-        // 2. Verificar que existe registro en cocina
-        var pedidoCocina = detalle.Pedidococina?.FirstOrDefault(); // Acceder al primer elemento
-
-        if (pedidoCocina == null)
-            return BadRequest("Este producto no requiere preparación en cocina");
-
-        // 3. Validar el estado
-        if (!new[] { "Pendiente", "En preparación", "Terminado" }.Contains(dto.Estado))
-            return BadRequest("Estado no válido");
-
-        // 4. Actualizar el estado
-        pedidoCocina.Estado = dto.Estado; // Acceder al elemento individual
-
-        try
-        {
-            _context.SaveChanges();
-            return Ok(new
-            {
-                mensaje = $"Estado actualizado a {dto.Estado}",
-                idDetalle,
-                producto = detalle.TipoProducto
-            });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error al guardar: {ex.Message}");
-        }
-    }
-    [Authorize(Roles = "Cocinero")]
-    [HttpGet("PedidosCocina")]
-    public IActionResult GetPedidosCocina()
-    {
-        var pedidos = _context.Pedidococina
-            .Include(pc => pc.IdDetalleNavigation)
-            .ThenInclude(d => d.IdPedidoNavigation)
-            .Where(pc => pc.Estado != "Terminado")
-            .Select(pc => new {
-                pc.IdEstado,
-                pc.Estado,
-                Detalle = new
-                {
-                    pc.IdDetalleNavigation.IdDetalle,
-                    pc.IdDetalleNavigation.TipoProducto,
-                    pc.IdDetalleNavigation.Cantidad,
-                    Pedido = new
-                    {
-                        pc.IdDetalleNavigation.IdPedidoNavigation.IdPedido,
-                        pc.IdDetalleNavigation.IdPedidoNavigation.NumMesa,
-                        pc.IdDetalleNavigation.IdPedidoNavigation.Fecha
-                    }
-                }
-            })
-            .ToList();
-
-        return Ok(pedidos);
-    }
-
 }

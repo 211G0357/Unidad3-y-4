@@ -41,8 +41,8 @@ builder.Services.AddTransient<JwtService>();
 //Validadores
 builder.Services.AddSignalR();
 builder.Services.AddTransient<UsuarioValidator>();
-builder.Services.AddScoped<TicketDetalleValidator>();
 builder.Services.AddScoped<IValidator<ListaTicketsDTO>, ListaTicketsDTOValidator>();
+builder.Services.AddScoped<TicketDetalleValidator>();
 builder.Services.AddControllers();
 builder.Services.AddCors(x =>
 {
@@ -50,7 +50,7 @@ builder.Services.AddCors(x =>
         policy =>
         {
             policy
-                .WithOrigins("https://localhost:44349", "https://10.1.199.22:45455", "https://10.1.195.177:45456")
+                .WithOrigins("https://localhost:44349", "https://192.168.1.72:45455", "https://10.1.195.177:45456")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
             .AllowCredentials();

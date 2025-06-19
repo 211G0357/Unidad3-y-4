@@ -288,19 +288,19 @@
             const mesa = document.getElementById("mesa").value;
 
             if (!mesa) {
-                alert("Ingresa número de mesa");
+                alert("Ingresa el número de mesa.");
                 return;
             }
 
             if (ticket.length === 0) {
-                alert("Agrega productos al ticket");
+                alert("Agrega productos al ticket.");
                 return;
             }
 
             const dto = {
                 NumMesa: parseInt(mesa),
                 Detalles: ticket.map(item => ({
-                    TipoProducto: item.tipo,
+                    TipoProducto: item.tipo,  // Usará el ENUM (Hamburguesa, Papas, Refresco)
                     IdProducto: item.idProducto,
                     Cantidad: item.cantidad,
                     PrecioUnitario: item.precioUnitario
@@ -308,29 +308,30 @@
             };
 
             try {
-                const response = await fetch("https://10.1.195.177:45456/api/Tickets/CrearTicketConDetalles", {
+                const response = await fetch("https://192.168.1.72:45455/api/Tickets/CrearTicketConDetalles", {
                     method: "POST",
                     headers: {
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
                     },
                     body: JSON.stringify(dto)
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message || "Error al crear ticket");
+                    const errorText = await response.text();
+                    throw new Error(errorText);
                 }
 
                 const result = await response.json();
-                alert(`Ticket creado (#${result.idPedido})`);
-                ticket = [];
+                alert("✅ " + result.mensaje);
+                ticket.length = 0;
                 renderTicket();
 
             } catch (error) {
-                console.error("Error:", error);
-                alert(`Error: ${error.message}`);
+                console.error("Error al enviar el ticket:", error);
+                alert("Error al enviar el ticket: " + error.message);
             }
+        }
 
         function Finalizar() {
             if (ticket.length === 0) {

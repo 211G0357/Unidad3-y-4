@@ -183,31 +183,31 @@ async function cargarPedidos() {
     }
 }
 
-function mostrarPedidos(pedidos) {
-    const contenedor = document.getElementById('contenedor-pedidos');
-    contenedor.innerHTML = '';
+        function mostrarPedidos(pedidos) {
+            const contenedor = document.getElementById('contenedor-pedidos');
+            contenedor.innerHTML = '';
 
-    if (!pedidos || pedidos.length === 0) {
-        mostrarMensaje('No hay pedidos activos para preparar');
-        return;
-    }
+            if (!pedidos || pedidos.length === 0) {
+                mostrarMensaje('No hay pedidos activos para preparar');
+                return;
+            }
 
-    // Ordenar pedidos: primero los más antiguos
-    pedidos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            // Ordenar pedidos: primero los más antiguos
+            pedidos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-    pedidos.forEach(pedido => {
-        // Filtrar solo productos de cocina (hamburguesas y papas)
-        const productosCocina = (pedido.detalles || []).filter(d => 
-            d.tipoProducto === 'Hamburguesa' || d.tipoProducto === 'Papas'
-        );
+            pedidos.forEach(pedido => {
+                // Filtrar solo productos de cocina (hamburguesas y papas)
+                const productosCocina = (pedido.detalles || []).filter(d =>
+                    d.tipoProducto && (d.tipoProducto.includes('Hamburguesa') || d.tipoProducto.includes('Papas'))
+                );
 
-        if (productosCocina.length === 0) return;
+                if (productosCocina.length === 0) return;
 
-        const divPedido = document.createElement('div');
-        divPedido.className = 'pedido';
-        divPedido.dataset.pedidoId = pedido.idPedido;
+                const divPedido = document.createElement('div');
+                divPedido.className = 'pedido';
+                divPedido.dataset.pedidoId = pedido.idPedido;
 
-        divPedido.innerHTML = `
+                divPedido.innerHTML = `
             <div class="pedido-header">
                 <h3>Pedido #${pedido.idPedido} - Mesa ${pedido.numMesa || 'N/A'}</h3>
                 <span class="estado estado-${(pedido.estado || 'Pendiente').toLowerCase().replace(' ', '-')}">
@@ -220,6 +220,7 @@ function mostrarPedidos(pedidos) {
                     <div class="producto" data-detalle-id="${producto.idDetalle}">
                         <div class="producto-info">
                             <span>${producto.cantidad}x ${obtenerNombreProducto(producto)}</span>
+                            <span class="notas">${producto.notas || ''}</span>
                             <span class="estado estado-${(producto.estadoCocina || 'Pendiente').toLowerCase().replace(' ', '-')}">
                                 ${producto.estadoCocina || 'Pendiente'}
                             </span>
@@ -237,16 +238,35 @@ function mostrarPedidos(pedidos) {
             </div>
         `;
 
-        contenedor.appendChild(divPedido);
-    });
-}
+                contenedor.appendChild(divPedido);
+            });
+        }
 
-function obtenerNombreProducto(producto) {
-    if (producto.producto) return producto.producto;
-    if (producto.tipoProducto === 'Hamburguesa') return 'Hamburguesa';
-    if (producto.tipoProducto === 'Papas') return 'Papas';
-    return 'Producto';
-}
+        function obtenerNombreProducto(producto) {
+            if (producto.tipoProducto) {
+                if (producto.tipoProducto.includes('Hamburguesa') && producto.descripcion) {
+                    return producto.descripcion;
+                }
+                return producto.tipoProducto;
+            }
+            if (producto.nombreProducto) return producto.nombreProducto;
+            if (producto.idProducto) {
+                return obtenerNombrePorId(producto.idProducto) || 'Producto';
+            }
+            return 'Producto sin nombre';
+        }
+
+        function obtenerNombrePorId(idProducto) {
+            const mapeoProductos = {
+                1: 'Hamburguesa Sencilla',
+                2: 'Hamburguesa Doble',
+                3: 'Hamburguesa con Queso',
+                4: 'Papas Chicas',
+                5: 'Papas Grandes',
+                6: 'Papas con Queso',
+            };
+            return mapeoProductos[idProducto];
+        }
 
 async function conectarSignalR() {
     try {
@@ -278,18 +298,15 @@ async function conectarSignalR() {
         await connection.start();
         console.log('Conectado al hub de pedidos');
         
-        // Unirse al grupo de cocina
         await connection.invoke("AddToGroup", "Cocina");
     } catch (error) {
         console.error('Error con SignalR:', error);
         mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
-        // Plan B: Recargar cada 30 segundos si SignalR falla
         setInterval(cargarPedidos, 30000);
     }
 }
 
 function configurarEventListeners() {
-    // Delegación de eventos para los botones de actualización
     document.addEventListener('click', async (e) => {
         if (e.target.classList.contains('btn-actualizar')) {
             const productoDiv = e.target.closest('.producto');

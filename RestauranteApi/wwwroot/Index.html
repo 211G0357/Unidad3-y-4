@@ -174,6 +174,7 @@
                     <tr><td onclick="mostrarSabores('Chico')">Ref. Chico - $15</td></tr>
                     <tr><td onclick="mostrarSabores('Mediano')">Ref. Mediano - $18</td></tr>
                     <tr><td onclick="mostrarSabores('Grande')">Ref. Grande - $20</td></tr>
+
                 </table>
             </div>
         </div>
@@ -199,6 +200,7 @@
                 </tr>
             </thead>
             <tbody id="ticket-lista"></tbody>
+
         </table>
 
         <div class="total" style="margin-top: 10px; font-weight: bold;">
@@ -216,7 +218,7 @@
         const mesaInput = document.getElementById('mesa');
 
         const productoCatalogo = {
-            
+
             "Hamb. Sencilla": { id: 2, tipo: "Hamburguesa", precio: 50.00 },
             "Hamb. Doble": { id: 3, tipo: "Hamburguesa", precio: 70.00 },
             "Hamb. con Queso": { id: 5, tipo: "Hamburguesa", precio: 65.00 },
@@ -238,6 +240,7 @@
             "Coca Light": 5,
             "Manzana": 6
         };
+        
 
         function AgregarNuevoTicket() {
             ticket.length = 0;

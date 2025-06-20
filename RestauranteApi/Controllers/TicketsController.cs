@@ -1,10 +1,12 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Repositories;
+using RestauranteApi.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net.Sockets;
@@ -20,13 +22,15 @@ public class TicketsController : ControllerBase
     private readonly Repository<Pedidodetalle> pedidodetallRepository;
     private readonly Repository<Pedidococina> pedidococinaRepository;
     private readonly IValidator<ListaTicketsDTO> validator;
+    private readonly IHubContext<PedidosHub> _hubContext;
 
     public TicketsController(Repository<Pedido> ticketRepository, 
         HamburguesaContext context, 
         Repository<Pedido> repository, 
         Repository<Pedidodetalle> pedidodetallRepository, 
         Repository<Pedidococina> pedidococinaRepository,
-        IValidator<ListaTicketsDTO> validator)
+        IValidator<ListaTicketsDTO> validator,
+        IHubContext<PedidosHub> hubContext)
     {
         this.ticketRepository = ticketRepository;
         _context = context;
@@ -34,10 +38,11 @@ public class TicketsController : ControllerBase
         this.pedidodetallRepository = pedidodetallRepository;
         this.pedidococinaRepository = pedidococinaRepository;
         this.validator = validator;
+        this._hubContext = hubContext;
     }
     
     [HttpPost("CrearTicket")]
-    public IActionResult CrearTicket([FromBody] CrearTicketDTO dto)
+    public async Task<IActionResult> CrearTicket([FromBody] CrearTicketDTO dto)
     {
         
         var existe = ticketRepository.GetAll()
@@ -58,7 +63,7 @@ public class TicketsController : ControllerBase
         };
 
         ticketRepository.Insert(nuevo);
-
+        await _hubContext.Clients.All.SendAsync("ActualizarPedidos");
         return Ok(new { mensaje = "Ticket creado", nuevo.IdPedido });
     }
     [HttpGet("PedidosPorMesa")]
@@ -97,7 +102,7 @@ public class TicketsController : ControllerBase
         return Ok(pedidosPorMesa);
     }
     [HttpPost("CrearTicketConDetalles")]
-    public IActionResult CrearTicketConDetalles([FromBody] CrearTicketConDetallesDTO dto)
+    public async Task<IActionResult> CrearTicketConDetalles([FromBody] CrearTicketConDetallesDTO dto)
     {
         if (dto.Detalles == null || !dto.Detalles.Any())
             return BadRequest("Debe incluir al menos un producto.");
@@ -148,6 +153,9 @@ public class TicketsController : ControllerBase
         }
 
         _context.SaveChanges();
+
+        // Notificar a todos los clientes
+        await _hubContext.Clients.All.SendAsync("ActualizarPedidos");
 
         return Ok(new { mensaje = "Ticket creado correctamente", nuevo.IdPedido });
     }
@@ -213,7 +221,7 @@ public class TicketsController : ControllerBase
     }
     [Authorize(Roles = "Mesero")]
     [HttpDelete("EliminarTicket/{id}")]
-    public IActionResult EliminarTicket(int id)
+    public async Task<IActionResult> EliminarTicket(int id)
     {
         var ticket = _context.Pedido
                .Include(p => p.Pedidodetalle)
@@ -222,8 +230,8 @@ public class TicketsController : ControllerBase
         if (ticket == null)
             return NotFound("El ticket no existe.");
 
-        if (ticket.Estado != "Completado")
-            return BadRequest("Solo se pueden eliminar tickets en estado Completados.");
+        if (ticket.Estado != "Terminado")
+            return BadRequest("Solo se pueden eliminar tickets en estado Terminado.");
 
         // Eliminar detalles asociados
         var detalles = _context.Pedidodetalle.Where(d => d.IdPedido == id).ToList();
@@ -236,8 +244,10 @@ public class TicketsController : ControllerBase
 
         // Eliminar el ticket
         _context.Pedido.Remove(ticket);
-
         _context.SaveChanges();
+
+        // 🔔 Notificar a todos los clientes que actualicen la lista
+        await _hubContext.Clients.All.SendAsync("ActualizarPedidos");
 
         return Ok(new { mensaje = "Ticket eliminado correctamente" });
     }

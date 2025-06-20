@@ -86,6 +86,9 @@
     <h1>Pedidos Agrupados por Mesa</h1>
     <button onclick="location.href='Index.html'" style="margin-bottom: 20px;">Nuevo Pedido</button>
 
+    <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none;
+       padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
+
     <div id="contenedor-pedidos"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
@@ -163,19 +166,19 @@
                         divPedido.className = "pedido";
 
                         const botonFinalizar = `
-                            <button class="btn-finalizar"
-                                onclick="Finalizar(event, ${ticket.idPedido})"
-                                data-id="${ticket.idPedido}"
-                                ${ticket.estado !== "Terminado" ? "disabled" : ""}>
-                                Finalizar Servicio
-                            </button>`;
+                                <button class="btn-finalizar"
+                                    onclick="Finalizar(event, ${ticket.idPedido})"
+                                    ${ticket.estado !== "Terminado" ? "disabled" : ""}>
+                                    Finalizar Servicio
+                                </button>
+                            `;
 
                         divPedido.innerHTML = `
-                            <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
-                            <p><strong>Platillos:</strong> ${platillos}</p>
-                            <p><strong>Estado:</strong> <span>${ticket.estado}</span></p>
-                            ${botonFinalizar}
-                        `;
+                                <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
+                                <p><strong>Platillos:</strong> ${platillos}</p>
+                                <p><strong>Estado:</strong> ${ticket.estado}</p>
+                                ${botonFinalizar}
+                            `;
 
                         divPedido.onclick = (e) => {
                             if (e.target.tagName !== 'BUTTON') {

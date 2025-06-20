@@ -82,6 +82,18 @@
             .btn-actualizar:hover {
                 background-color: #45a049;
             }
+        .btn-cerrarSecion {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .btn-actualizar:hover {
+                background-color: #45a049;
+            }
 
         /* Estados */
         .estado {
@@ -236,6 +248,9 @@ async function cargarPedidos() {
                                 <option value="Terminado" ${(producto.estadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
                             </select>
                             <button class="btn-actualizar">Actualizar</button>
+
+                           <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none; padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
+
                         </div>
                     </div>
                 `).join('')}

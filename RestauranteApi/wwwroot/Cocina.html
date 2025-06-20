@@ -136,66 +136,67 @@
 </head>
 <body>
     <h2>Cocina</h2>
+    <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none; padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
 
     <div id="contenedor-pedidos"></div>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         const API_BASE_URL = 'https://192.168.1.104:45455/api/Cocina';
         const HUB_URL = 'https://192.168.1.104:45455/pedidosHub';
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Verificar autenticación
-        if (!localStorage.getItem('token')) {
-            mostrarMensaje('No estás autenticado. Redirigiendo a login...', true);
-            setTimeout(() => window.location.href = '/login', 2000);
-            return;
-        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Verificar autenticación
+                if (!localStorage.getItem('token')) {
+                    mostrarMensaje('No estás autenticado. Redirigiendo a login...', true);
+                    setTimeout(() => window.location.href = '/login', 2000);
+                    return;
+                }
 
-        // Cargar pedidos iniciales
-        await cargarPedidos();
+                // Cargar pedidos iniciales
+                await cargarPedidos();
 
-        // Conectar a SignalR para actualizaciones en tiempo real
-        await conectarSignalR();
+                // Conectar a SignalR para actualizaciones en tiempo real
+                await conectarSignalR();
 
-        // Configurar listeners para los botones de actualización
-        configurarEventListeners();
-    } catch (error) {
-        console.error('Error inicial:', error);
-        mostrarMensaje('Error al iniciar la aplicación: ' + error.message, true);
-    }
-});
-
-async function cargarPedidos() {
-    try {
-        mostrarMensaje('Cargando pedidos activos...');
-        
-        const response = await fetch(`${API_BASE_URL}/PedidosActivos`, {
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                'Content-Type': 'application/json'
+                // Configurar listeners para los botones de actualización
+                configurarEventListeners();
+            } catch (error) {
+                console.error('Error inicial:', error);
+                mostrarMensaje('Error al iniciar la aplicación: ' + error.message, true);
             }
         });
 
-        if (!response.ok) {
-            if (response.status === 401) {
-                mostrarMensaje('Sesión expirada. Por favor ingresa nuevamente.', true);
-                setTimeout(() => window.location.href = '/login', 3000);
-                return;
-            }
-            
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-        }
+        async function cargarPedidos() {
+            try {
+                mostrarMensaje('Cargando pedidos activos...');
 
-        const pedidos = await response.json();
-        mostrarPedidos(pedidos);
-    } catch (error) {
-        console.error('Error al cargar pedidos:', error);
-        mostrarMensaje('Error al cargar pedidos: ' + error.message, true);
-    }
-}
+                const response = await fetch(`${API_BASE_URL}/PedidosActivos`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        mostrarMensaje('Sesión expirada. Por favor ingresa nuevamente.', true);
+                        setTimeout(() => window.location.href = '/login', 3000);
+                        return;
+                    }
+
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+                }
+
+                const pedidos = await response.json();
+                mostrarPedidos(pedidos);
+            } catch (error) {
+                console.error('Error al cargar pedidos:', error);
+                mostrarMensaje('Error al cargar pedidos: ' + error.message, true);
+            }
+        }
 
         function mostrarPedidos(pedidos) {
             const contenedor = document.getElementById('contenedor-pedidos');
@@ -226,37 +227,37 @@ async function cargarPedidos() {
                 divPedido.dataset.pedidoId = pedido.idPedido;
 
                 divPedido.innerHTML = `
-            <div class="pedido-header">
-                <h3>Pedido #${pedido.idPedido} - Mesa ${pedido.numMesa || 'N/A'}</h3>
-                <span class="estado estado-${(pedido.estado || 'Pendiente').toLowerCase().replace(' ', '-')}">
-                    ${pedido.estado || 'Pendiente'}
-                </span>
-            </div>
-            <div class="pedido-fecha">${formatearFecha(pedido.fecha)}</div>
-            <div class="productos-cocina">
-                ${productosCocina.map(producto => `
-                    <div class="producto" data-detalle-id="${producto.idDetalle}">
-                        <div class="producto-info">
-                            <span>${producto.cantidad}x ${obtenerNombreProducto(producto)}</span>
-                            <span class="notas">${producto.notas || ''}</span>
-                            <span class="estado estado-${(producto.estadoCocina || 'Pendiente').toLowerCase().replace(' ', '-')}">
-                                ${producto.estadoCocina || 'Pendiente'}
-                            </span>
-                        </div>
-                        <div class="producto-acciones">
-                            <select class="estado-select">
-                                <option value="En preparación" ${(producto.estadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
-                                <option value="Terminado" ${(producto.estadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
-                            </select>
-                            <button class="btn-actualizar">Actualizar</button>
+                <div class="pedido-header">
+                    <h3>Pedido #${pedido.idPedido} - Mesa ${pedido.numMesa || 'N/A'}</h3>
+                    <span class="estado estado-${(pedido.estado || 'Pendiente').toLowerCase().replace(' ', '-')}">
+                        ${pedido.estado || 'Pendiente'}
+                    </span>
+                </div>
+                <div class="pedido-fecha">${formatearFecha(pedido.fecha)}</div>
+                <div class="productos-cocina">
+                    ${productosCocina.map(producto => `
+                        <div class="producto" data-detalle-id="${producto.idDetalle}">
+                            <div class="producto-info">
+                                <span>${producto.cantidad}x ${obtenerNombreProducto(producto)}</span>
+                                <span class="notas">${producto.notas || ''}</span>
+                                <span class="estado estado-${(producto.estadoCocina || 'Pendiente').toLowerCase().replace(' ', '-')}">
+                                    ${producto.estadoCocina || 'Pendiente'}
+                                </span>
+                            </div>
+                            <div class="producto-acciones">
+                                <select class="estado-select">
+                                    <option value="En preparación" ${(producto.estadoCocina || 'Pendiente') === 'En preparación' ? 'selected' : ''}>En preparación</option>
+                                    <option value="Terminado" ${(producto.estadoCocina || 'Pendiente') === 'Terminado' ? 'selected' : ''}>Terminado</option>
+                                </select>
+                                <button class="btn-actualizar">Actualizar</button>
 
-                           <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none; padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
 
+
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+                    `).join('')}
+                </div>
+            `;
 
                 contenedor.appendChild(divPedido);
             });
@@ -288,127 +289,127 @@ async function cargarPedidos() {
             return mapeoProductos[idProducto];
         }
 
-async function conectarSignalR() {
-    try {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(HUB_URL)
-            .configureLogging(signalR.LogLevel.Warning)
-            .withAutomaticReconnect()
-            .build();
-
-        connection.on("EstadoActualizado", () => {
-            mostrarMensaje('Nueva actualización de estado recibida');
-            cargarPedidos();
-        });
-
-        connection.on("NuevoProducto", (mensaje) => {
-            mostrarMensaje(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
-            cargarPedidos();
-        });
-
-        connection.onreconnecting(() => {
-            mostrarMensaje('Reconectando con el servidor...', true);
-        });
-
-        connection.onreconnected(() => {
-            mostrarMensaje('Conexión restablecida');
-            cargarPedidos();
-        });
-
-        await connection.start();
-        console.log('Conectado al hub de pedidos');
-        
-        await connection.invoke("AddToGroup", "Cocina");
-    } catch (error) {
-        console.error('Error con SignalR:', error);
-        mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
-        setInterval(cargarPedidos, 30000);
-    }
-}
-
-function configurarEventListeners() {
-    document.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('btn-actualizar')) {
-            const productoDiv = e.target.closest('.producto');
-            const idDetalle = productoDiv.dataset.detalleId;
-            const select = productoDiv.querySelector('.estado-select');
-            const nuevoEstado = select.value;
-            
-            // Mostrar loader en el botón
-            e.target.disabled = true;
-            e.target.textContent = 'Actualizando...';
-            
+        async function conectarSignalR() {
             try {
-                const response = await fetch(`${API_BASE_URL}/ActualizarEstado/${idDetalle}?nuevoEstado=${encodeURIComponent(nuevoEstado)}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                        'Content-Type': 'application/json'
-                    }
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(HUB_URL)
+                    .configureLogging(signalR.LogLevel.Warning)
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("EstadoActualizado", () => {
+                    mostrarMensaje('Nueva actualización de estado recibida');
+                    cargarPedidos();
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Error al actualizar estado');
-                }
+                connection.on("NuevoProducto", (mensaje) => {
+                    mostrarMensaje(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
+                    cargarPedidos();
+                });
 
-                // Actualizar visualmente el estado
-                const estadoSpan = productoDiv.querySelector('.estado');
-                estadoSpan.textContent = nuevoEstado;
-                estadoSpan.className = `estado estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
-                
-                mostrarMensaje(`Estado actualizado a: ${nuevoEstado}`);
+                connection.onreconnecting(() => {
+                    mostrarMensaje('Reconectando con el servidor...', true);
+                });
+
+                connection.onreconnected(() => {
+                    mostrarMensaje('Conexión restablecida');
+                    cargarPedidos();
+                });
+
+                await connection.start();
+                console.log('Conectado al hub de pedidos');
+
+                await connection.invoke("AddToGroup", "Cocina");
             } catch (error) {
-                console.error('Error al actualizar estado:', error);
-                mostrarMensaje('Error al actualizar estado: ' + error.message, true);
-            } finally {
-                // Restaurar botón
-                e.target.disabled = false;
-                e.target.textContent = 'Actualizar';
+                console.error('Error con SignalR:', error);
+                mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
+                setInterval(cargarPedidos, 30000);
             }
         }
-    });
-}
 
-function formatearFecha(fechaString) {
-    if (!fechaString) return 'Fecha no disponible';
-    
-    try {
-        const opciones = { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: true
-        };
-        return new Date(fechaString).toLocaleDateString('es-MX', opciones);
-    } catch {
-        return fechaString;
-    }
-}
+        function configurarEventListeners() {
+            document.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('btn-actualizar')) {
+                    const productoDiv = e.target.closest('.producto');
+                    const idDetalle = productoDiv.dataset.detalleId;
+                    const select = productoDiv.querySelector('.estado-select');
+                    const nuevoEstado = select.value;
 
-function mostrarMensaje(texto, esError = false) {
-    const contenedor = document.getElementById('contenedor-pedidos') || document.body;
-    const mensaje = document.createElement('div');
-    mensaje.className = `mensaje ${esError ? 'error' : ''}`;
-    mensaje.textContent = texto;
-    
-    // Insertar al principio
-    if (contenedor.firstChild) {
-        contenedor.insertBefore(mensaje, contenedor.firstChild);
-    } else {
-        contenedor.appendChild(mensaje);
-    }
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (mensaje.parentNode) {
-            mensaje.remove();
+                    // Mostrar loader en el botón
+                    e.target.disabled = true;
+                    e.target.textContent = 'Actualizando...';
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/ActualizarEstado/${idDetalle}?nuevoEstado=${encodeURIComponent(nuevoEstado)}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Error al actualizar estado');
+                        }
+
+                        // Actualizar visualmente el estado
+                        const estadoSpan = productoDiv.querySelector('.estado');
+                        estadoSpan.textContent = nuevoEstado;
+                        estadoSpan.className = `estado estado-${nuevoEstado.toLowerCase().replace(' ', '-')}`;
+
+                        mostrarMensaje(`Estado actualizado a: ${nuevoEstado}`);
+                    } catch (error) {
+                        console.error('Error al actualizar estado:', error);
+                        mostrarMensaje('Error al actualizar estado: ' + error.message, true);
+                    } finally {
+                        // Restaurar botón
+                        e.target.disabled = false;
+                        e.target.textContent = 'Actualizar';
+                    }
+                }
+            });
         }
-    }, 5000);
-}
-</script>
+
+        function formatearFecha(fechaString) {
+            if (!fechaString) return 'Fecha no disponible';
+
+            try {
+                const opciones = {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                };
+                return new Date(fechaString).toLocaleDateString('es-MX', opciones);
+            } catch {
+                return fechaString;
+            }
+        }
+
+        function mostrarMensaje(texto, esError = false) {
+            const contenedor = document.getElementById('contenedor-pedidos') || document.body;
+            const mensaje = document.createElement('div');
+            mensaje.className = `mensaje ${esError ? 'error' : ''}`;
+            mensaje.textContent = texto;
+
+            // Insertar al principio
+            if (contenedor.firstChild) {
+                contenedor.insertBefore(mensaje, contenedor.firstChild);
+            } else {
+                contenedor.appendChild(mensaje);
+            }
+
+            // Auto-eliminar después de 5 segundos
+            setTimeout(() => {
+                if (mensaje.parentNode) {
+                    mensaje.remove();
+                }
+            }, 5000);
+        }
+    </script>
 
 </body>
 </html>

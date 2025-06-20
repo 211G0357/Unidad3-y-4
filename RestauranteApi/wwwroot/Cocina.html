@@ -192,16 +192,20 @@ async function cargarPedidos() {
                 return;
             }
 
-            // Ordenar pedidos: primero los más antiguos
-            pedidos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
             pedidos.forEach(pedido => {
-                // Filtrar solo productos de cocina (hamburguesas y papas)
+                // Aquí solo para debug:
+                console.log('Pedido', pedido.idPedido, 'con productos:', pedido.detalles.map(d => d.tipoProducto).join(', '));
+
+                // Filtrar productos cocina (hamburguesa o papas)
                 const productosCocina = (pedido.detalles || []).filter(d =>
-                    d.tipoProducto && (d.tipoProducto.includes('Hamburguesa') || d.tipoProducto.includes('Papas'))
+                    d.tipoProducto.toLowerCase().includes('hamburguesa') || d.tipoProducto.toLowerCase().includes('papas')
                 );
 
-                if (productosCocina.length === 0) return;
+                if (productosCocina.length === 0) {
+                    // Si quieres ver que se está filtrando, puedes también mostrar pedidos que no tengan cocina comentando este return
+                    console.log(`Pedido ${pedido.idPedido} NO tiene productos para cocina y se omite.`);
+                    return;
+                }
 
                 const divPedido = document.createElement('div');
                 divPedido.className = 'pedido';

@@ -63,7 +63,6 @@
 
     <div id="contenedor-pedidos"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
-
     <script>
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("https://192.168.1.104:45455/pedidosHub")
@@ -110,10 +109,11 @@
                         const divPedido = document.createElement("div");
                         divPedido.className = "pedido";
 
+                        // El botón se habilita solo si estado es "Terminado"
                         const botonFinalizar = `
                             <button class="btn-finalizar"
                                 onclick="Finalizar(event, ${ticket.idPedido})"
-                                ${ticket.estado === "Pendiente" ? "disabled" : ""}>
+                                ${ticket.estado !== "Terminado" ? "disabled" : ""}>
                                 Finalizar Servicio
                             </button>
                         `;
@@ -183,7 +183,7 @@
 
                 alert("Servicio finalizado correctamente");
 
-                // Ya no es necesario llamar a cargarPedidos aquí, lo hará SignalR automáticamente
+                // No es necesario llamar a cargarPedidos porque SignalR lo hará
 
             } catch (error) {
                 console.error("Error al finalizar servicio:", error);
@@ -191,9 +191,9 @@
             }
         }
 
-        connection.on("ActualizarPedidos", () => {
-            cargarPedidos();
-        });
+        // Llama a cargarPedidos para cargar inicialmente la lista
+        cargarPedidos();
     </script>
+    
 </body>
 </html>

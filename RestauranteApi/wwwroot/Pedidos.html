@@ -119,7 +119,7 @@
         async function conectarSignalR() {
             try {
                 const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("https://192.168.1.104:45455/pedidosHub")
+                    .withUrl("https://10.1.195.177:45455/pedidosHub")
                     .configureLogging(signalR.LogLevel.Warning)
                     .withAutomaticReconnect()
                     .build();
@@ -200,7 +200,7 @@
             }
 
             try {
-                const response = await fetch("https://192.168.1.104:45455/api/Tickets/PedidosPorMesa", {
+                const response = await fetch("https://10.1.195.177:45455/api/Tickets/PedidosPorMesa", {
                     headers: { "Authorization": "Bearer " + token }
                 });
 
@@ -329,56 +329,56 @@
             });
         }
 
-        window.Finalizar = async function (event, idPedido) {
-            event.stopPropagation();
+        //window.Finalizar = async function (event, idPedido) {
+        //    event.stopPropagation();
 
-            const token = localStorage.getItem("token");
-            if (!token) {
-                mostrarMensaje("No hay sesión activa.", true);
-                window.location.href = "Login.html";
-                return;
-            }
+        //    const token = localStorage.getItem("token");
+        //    if (!token) {
+        //        mostrarMensaje("No hay sesión activa.", true);
+        //        window.location.href = "Login.html";
+        //        return;
+        //    }
 
-            try {
-                // Mostrar confirmación personalizada
-                const confirmado = await confirmarEliminacion(idPedido);
-                if (!confirmado) return;
+        //    try {
+        //        // Mostrar confirmación personalizada
+        //        const confirmado = await confirmarEliminacion(idPedido);
+        //        if (!confirmado) return;
 
-                // Mostrar carga mientras se procesa
-                const originalText = event.target.innerHTML;
-                event.target.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Eliminando...';
-                event.target.disabled = true;
+        //        // Mostrar carga mientras se procesa
+        //        const originalText = event.target.innerHTML;
+        //        event.target.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Eliminando...';
+        //        event.target.disabled = true;
 
-                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${idPedido}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                    }
-                });
+        //        const response = await fetch(`https://10.1.195.177:45455/api/Tickets/EliminarTicket/${idPedido}`, {
+        //            method: 'DELETE',
+        //            headers: {
+        //                'Authorization': 'Bearer ' + token,
+        //                'Content-Type': 'application/json'
+        //            }
+        //        });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.mensaje || errorData?.message || "Error al eliminar el ticket");
-                }
+        //        if (!response.ok) {
+        //            const errorData = await response.json().catch(() => null);
+        //            throw new Error(errorData?.mensaje || errorData?.message || "Error al eliminar el ticket");
+        //        }
 
-                const result = await response.json();
-                mostrarMensaje(result.mensaje || `Ticket #${idPedido} eliminado correctamente`);
+        //        const result = await response.json();
+        //        mostrarMensaje(result.mensaje || `Ticket #${idPedido} eliminado correctamente`);
 
-                // Recargar la lista de pedidos
-                if (typeof cargarPedidos === 'function') {
-                    await cargarPedidos();
-                }
+        //        // Recargar la lista de pedidos
+        //        if (typeof cargarPedidos === 'function') {
+        //            await cargarPedidos();
+        //        }
 
-            } catch (error) {
-                mostrarMensaje("Error al eliminar el ticket: " + error.message, true);
-            } finally {
-                if (event.target) {
-                    event.target.innerHTML = originalText;
-                    event.target.disabled = false;
-                }
-            }
-        };
+        //    } catch (error) {
+        //        mostrarMensaje("Error al eliminar el ticket: " + error.message, true);
+        //    } finally {
+        //        if (event.target) {
+        //            event.target.innerHTML = originalText;
+        //            event.target.disabled = false;
+        //        }
+        //    }
+        //};
 
         function IrATicket(mesa, idPedido) {
             window.location.href = `Index.html?mesa=${mesa}&IdPedido=${idPedido}`;
@@ -397,7 +397,7 @@
             if (!confirm("¿Estás seguro de que deseas finalizar y eliminar este ticket?")) return;
 
             try {
-                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${idPedido}`, {
+                const response = await fetch(`https://10.1.195.177:45455/api/Tickets/EliminarTicket/${idPedido}`, {
                     method: 'DELETE',
                     headers: {
                         "Authorization": "Bearer " + token,
@@ -424,6 +424,60 @@
             } catch (error) {
                 console.error("Error al eliminar ticket:", error);
                 alert(error.message || "No se pudo eliminar el ticket");
+            }
+        }
+        async function Finalizar(event, idPedido) {
+            event.stopPropagation();
+
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("No hay sesión activa.");
+                window.location.href = "Login.html";
+                return;
+            }
+
+            if (!confirm("¿Estás seguro de que deseas finalizar y eliminar este ticket?")) return;
+
+            // 🔧 Guardar el texto original del botón aquí
+            const boton = event.target;
+            const originalText = boton.innerHTML;
+
+            try {
+                boton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Eliminando...';
+                boton.disabled = true;
+
+                const response = await fetch(`https://10.1.195.177:45455/api/Tickets/EliminarTicket/${idPedido}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    let errorMessage = "Error al eliminar el ticket";
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.mensaje || errorData.message || errorMessage;
+                    } catch {
+                        const text = await response.text();
+                        if (text) errorMessage = text;
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                alert(result.mensaje || "Ticket eliminado correctamente");
+
+                // Deja que SignalR recargue
+
+            } catch (error) {
+                console.error("Error al eliminar ticket:", error);
+                alert(error.message || "No se pudo eliminar el ticket");
+            } finally {
+                // 🔧 Restaurar el estado del botón si hubo un error
+                boton.innerHTML = originalText;
+                boton.disabled = false;
             }
         }
 

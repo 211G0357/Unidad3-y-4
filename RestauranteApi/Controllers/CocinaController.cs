@@ -37,7 +37,7 @@ namespace RestauranteApi.Controllers
             _hubContext = hubContext;
             _validator = validator;
         }
-
+        [AllowAnonymous]
         [HttpGet("PedidosActivos")]
         public async Task<IActionResult> GetPedidosActivos()
         {
@@ -92,7 +92,7 @@ namespace RestauranteApi.Controllers
 
             return Ok(pedidos);
         }
-
+        [AllowAnonymous]
         [HttpPut("ActualizarEstado/{idDetalle}")]
         public async Task<IActionResult> ActualizarEstado(int idDetalle, [FromQuery] string nuevoEstado)
         {

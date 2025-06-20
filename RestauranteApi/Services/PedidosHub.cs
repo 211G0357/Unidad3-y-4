@@ -6,7 +6,12 @@ namespace RestauranteApi.Services
     {
         public async Task NotificarPedidoListo(int idPedido, string mesa)
         {
-            await Clients.All.SendAsync("PedidoListo", idPedido, mesa);
+            await Clients.All.SendAsync("PedidoListo", new
+            {
+                IdPedido = idPedido,
+                NumMesa = mesa,
+                HoraTerminado = DateTime.Now
+            });
         }
 
         public async Task NotificarEstadoCocina(int idDetalle, string estado)

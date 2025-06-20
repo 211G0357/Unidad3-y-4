@@ -87,7 +87,7 @@ namespace RestauranteApi.Controllers
                                     .Select(r => r.Precio)
                                     .FirstOrDefault() ?? 0
                     })
-                })
+                }).OrderBy(p=>p.Fecha)
                 .ToListAsync();
 
             return Ok(pedidos);

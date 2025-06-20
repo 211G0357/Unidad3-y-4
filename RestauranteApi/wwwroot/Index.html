@@ -1,188 +1,284 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Pedido - Restaurante</title>
+    <title>Menú del Restaurante</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: "Poppins", sans-serif;
             margin: 0;
             padding: 15px;
+            background-color: #e0f0f5;
             display: flex;
-            justify-content: space-between;
-            background-color: aliceblue;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
         }
 
         .menu {
-            width: 55%;
+            width: 600px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
             padding: 20px;
-            border-radius: 8px;
-            background-color: #8DBCC7;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
         }
 
+            .menu h2 {
+                text-align: center;
+                color: #1a1a1a;
+                margin-bottom: 25px;
+                font-weight: 700;
+                letter-spacing: 1.5px;
+            }
+
+        .categoria {
+            border-radius: 8px;
+            background: #f9f9f9;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+        }
+
+            .categoria:hover {
+                box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+            }
+
+        .categoria-header {
+            cursor: pointer;
+            padding: 14px 20px;
+            background: linear-gradient(90deg, #ffc107, #ffca28);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 1.15rem;
+            user-select: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+            .categoria-header .icono {
+                transition: transform 0.3s ease;
+                font-size: 1.2rem;
+            }
+
+            .categoria-header.active .icono {
+                transform: rotate(90deg);
+            }
+
+        .productos-lista {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+            padding: 0 20px;
+            background: #fff;
+        }
+
+            .productos-lista.abierto {
+                padding: 15px 20px;
+                max-height: 1000px; /* bastante alto para contener productos */
+            }
+
+        .producto {
+            padding: 12px 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background: #fff8e1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.25s ease;
+        }
+
+            .producto:hover {
+                background-color: #fff3c4;
+            }
+
+            .producto span.precio {
+                font-weight: 700;
+                color: #b28500;
+            }
+
+        .refresco-sabor {
+            margin-bottom: 15px;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            background: #fffde7;
+            padding: 10px 15px;
+        }
+
+        .refresco-sabor-header {
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            font-size: 1rem;
+        }
+
+        .refresco-tamanos {
+            margin-top: 8px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+            .refresco-tamanos.abierto {
+                display: flex;
+            }
+
+        .tamano-btn {
+            background-color: #fff8e1;
+            border: 1px solid #ffd54f;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #b28500;
+            transition: background-color 0.3s ease;
+            user-select: none;
+        }
+
+            .tamano-btn:hover {
+                background-color: #ffe082;
+            }
         .ticket {
-            width: 40%;
-            padding: 20px;
-            background-color: #8DBCC7;
-            border-radius: 8px;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            background: #f0f4f8;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            padding: 25px 30px;
+            width: 380px;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            user-select: none;
         }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-            color: white;
-            background-color: #648DB3;
+            .ticket h2 {
+                margin: 0 0 10px 0;
+                text-align: center;
+                color: #1f3c88;
+                font-weight: 700;
+                font-size: 1.6rem;
+            }
+
+            .ticket button {
+                background-color: #1f3c88;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+                font-weight: 600;
+            }
+
+                .ticket button:hover {
+                    background-color: #16427a;
+                }
+
+            .ticket label {
+                font-weight: 600;
+                font-size: 0.95rem;
+                margin-bottom: 6px;
+                display: block;
+                color: #555;
+            }
+
+            .ticket input[type="text"],
+            .ticket input[type="datetime-local"] {
+                width: 100%;
+                padding: 10px 12px;
+                border-radius: 8px;
+                border: 1.8px solid #ccc;
+                font-size: 1rem;
+                transition: border-color 0.3s ease;
+                outline-offset: 2px;
+            }
+
+                .ticket input[type="text"]:focus,
+                .ticket input[type="datetime-local"]:focus {
+                    border-color: #1f3c88;
+                    outline: none;
+                }
+
+            .ticket p {
+                font-weight: 600;
+                font-size: 1rem;
+                color: #444;
+            }
+
+                .ticket p strong {
+                    color: #1f3c88;
+                }
+
+        #estado {
+            font-weight: 700;
+            color: #e67e22;
         }
 
-        /*tablas de menu*/
-        table {
-            width: 55%;
+        #ticket-tabla {
+            width: 100%;
             border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+            #ticket-tabla th,
+            #ticket-tabla td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #ddd;
+                text-align: left;
+            }
+
+            #ticket-tabla thead th {
+                background-color: #1f3c88;
+                color: #fff;
+                font-weight: 600;
+            }
+
+        #ticket-lista tr:hover {
+            background-color: #e8f0fe;
+        }
+
+        .total {
+            font-size: 1.15rem;
+            font-weight: 700;
+            text-align: right;
+            color: #1f3c88;
             margin-top: 15px;
         }
 
-        th, td {
-            padding: 12px;
-            border: 1px solid #ccc;
-            text-align: center;
-        }
-
-        th {
-            background-color: #FFD700;
-        }
-
-        td {
-            background-color: #FAF3DD;
-            cursor: pointer;
-        }
-
-            td:hover {
-                background-color: #f0e68c;
-            }
-        /*TABLA DE SABORES*/
-        #sabores-container {
-            margin-top: 20px;
-            display: none;
-            padding: 15px;
-            width: 55%;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-            #sabores-container strong {
-                font-size: 18px;
-                display: block;
-                margin-bottom: 10px;
-            }
-
-        #sabores-opciones {
-            background-color: #FADA7A;
-            width: 100%;
-            text-align: center;
-        }
-            #sabores-opciones:hover {
-                background-color: #F5F0CD;
-            }
-        /*TICKET*/
-        .ticket table {
-            width: 100%;
-            border-collapse: collapse;
+        .ticket > button + button {
             margin-top: 10px;
+            background-color: #e74c3c;
         }
 
-        .ticket th, .ticket td {
-            padding: 10px;
-            border: 1px solid #ccc;
-            background-color: #FAF3DD;
-            text-align: left;
-        }
-
-        .ticket th {
-            background-color: #FFD700;
-            color: #333;
-        }
-
-        /*CAJITAS DE TEXTO Y FECHA*/
-        input[type="text"], input[type="datetime-local"] {
-            width: 55%;
-            padding: 10px;
-            margin-top: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            display: block;
-            box-sizing: border-box;
-        }
-        /*BOTONES*/
-        button {
-            padding: 12px;
-            margin-top: 20px;
-            width: 50%;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            justify-content: center;
-        }
-
-            button:hover {
-                background-color: #45a049;
+            .ticket > button + button:hover {
+                background-color: #c0392b;
             }
+
+
     </style>
 </head>
 <body>
-    <div class="menu">
-        <h2>🍔 Menú</h2>
 
-        <div>
-            <table>
-                <tr><th>🍔 Hamburguesas</th></tr>
-                <tr><td onclick="agregarAlTicket('Hamb. Sencilla', 50)">Hamburguesa Sencilla - $50</td></tr>
-                <tr><td onclick="agregarAlTicket('Hamb. Doble', 70)">Hamburguesa Doble - $70</td></tr>
-                <tr><td onclick="agregarAlTicket('Hamb. con Queso', 65)">Con Queso - $65</td></tr>
-            </table>
-        </div>
+    <div class="menu"></div>
 
-        <div>
-            <table>
-                <tr><th>🍟 Papas</th></tr>
-                <tr><td onclick="agregarAlTicket('Papas Chicas', 20)">Papas Chicas - $20</td></tr>
-                <tr><td onclick="agregarAlTicket('Papas Grandes', 30)">Papas Grandes - $30</td></tr>
-                <tr><td onclick="agregarAlTicket('Papas con Queso')">Papas con Queso</td></tr>
-            </table>
-        </div>
-
-        <div>
-            <table>
-                <tr><th>🥤 Refrescos</th></tr>
-                <tr><td onclick="mostrarSabores('Chico', 15)">Refresco Chico - $15</td></tr>
-                <tr><td onclick="mostrarSabores('Mediano', 18)">Refresco Mediano - $18</td></tr>
-                <tr><td onclick="mostrarSabores('Grande', 20)">Refresco Grande - $20</td></tr>
-            </table>
-            <div id="sabores-container">
-                <strong>Elige un sabor:</strong>
-                <table id="sabores-opciones">
-                    <tr>
-                        <th style="background-color: #FADA7A;">Sabor</th>
-                        <th style="background-color: #F5F0CD;">Seleccionar</th>
-                    </tr>
-                    <tr><td onclick="mostrarSabores('Chico')">Ref. Chico - $15</td></tr>
-                    <tr><td onclick="mostrarSabores('Mediano')">Ref. Mediano - $18</td></tr>
-                    <tr><td onclick="mostrarSabores('Grande')">Ref. Grande - $20</td></tr>
-
-                </table>
-            </div>
-        </div>
-    </div>
     <div class="ticket">
-        <h2>🧾 Ticket</h2>
-
-        <button onclick="AgregarNuevoTicket()">Nuevo Pedido.</button>
+        <h2>🧾 Ticket </h2>
+        <p><strong>Ticket:</strong> <span id="ticket-id">N/A</span></p>
+        <button onclick="AgregarNuevoTicket()">Nuevo Pedido</button>
 
         <label for="mesa"><strong>Mesa:</strong></label>
         <input type="text" id="mesa" placeholder="Ingrese número de mesa">
@@ -200,66 +296,180 @@
                 </tr>
             </thead>
             <tbody id="ticket-lista"></tbody>
-
         </table>
 
-        <div class="total" style="margin-top: 10px; font-weight: bold;">
+        <div class="total">
             Total: $<span id="total">0</span>
         </div>
 
-        <button onclick="enviarPedido()">Enviar a Cocina.</button>
-        <button onclick="Finalizar()">Finalizar Servicio.</button>
+        <button onclick="enviarPedido()">Enviar a Cocina</button>
+        <button onclick="Finalizar()">Finalizar Servicio</button>
     </div>
 
     <script>
+        let ticketIdActual = null;
         const ticket = [];
         const ticketLista = document.getElementById('ticket-lista');
         const totalSpan = document.getElementById('total');
         const mesaInput = document.getElementById('mesa');
-
-        const productoCatalogo = {
-
-            "Hamb. Sencilla": { id: 2, tipo: "Hamburguesa", precio: 50.00 },
-            "Hamb. Doble": { id: 3, tipo: "Hamburguesa", precio: 70.00 },
-            "Hamb. con Queso": { id: 5, tipo: "Hamburguesa", precio: 65.00 },
-
-            "Papas Chicas": { id: 1, tipo: "Papas", precio: 20.00 },
-            "Papas Medianas": { id: 2, tipo: "Papas", precio: 25.00 },
-            "Papas Grandes": { id: 3, tipo: "Papas", precio: 30.00 },
-            "Papas con Queso": { id: 4, tipo: "Papas", precio: 35.00 },
-
-            "Ref. Chico": { tipo: "Refresco", basePrecio: 15.00 },
-            "Ref. Mediano": { tipo: "Refresco", basePrecio: 18.00 },
-            "Ref. Grande": { tipo: "Refresco", basePrecio: 20.00 }
-        };
-        const saboresRefresco = {
-            "Coca": 1,
-            "Fresa": 2,
-            "Naranja": 3,
-            "Sprite": 4,
-            "Coca Light": 5,
-            "Manzana": 6
-        };
+        const productoCatalogo = {};
         
 
-        function AgregarNuevoTicket() {
-            ticket.length = 0;
-            renderTicket();
+        async function cargarMenuDesdeAPI() {
+            try {
+                const response = await fetch("https://192.168.1.104:45455/api/Productos/Todos", {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
 
-            document.getElementById('mesa').value = '';
-            document.getElementById('fecha').value = '';
-            document.getElementById('estado').textContent = 'Pendiente';
-            alert('Nuevo pedido iniciado 📝');
+                if (!response.ok) throw new Error("Error al obtener productos del servidor");
+
+                const productos = await response.json();
+                const productoCatalogo = {};
+
+                const menuContenedor = document.querySelector(".menu");
+                if (!menuContenedor) throw new Error("No se encontró el contenedor .menu en el DOM");
+
+                // Limpio y pongo título base
+                menuContenedor.innerHTML = "<h2>🍔 Menú</h2>";
+
+                // Agrupar productos
+                const categorias = {
+                    Hamburguesa: [],
+                    Papas: [],
+                    Refresco: {}
+                };
+
+                productos.forEach(p => {
+                    productoCatalogo[p.nombre] = {
+                        id: p.idProducto,
+                        tipo: p.tipoProducto,
+                        precio: p.precio
+                    };
+                    if (p.tipoProducto === "Refresco") {
+                        const match = p.nombre.match(/^(.+)\s*\((.+)\)$/);
+                        if (match) {
+                            const sabor = match[1].trim();
+                            const tamaño = match[2].trim();
+                            if (!categorias.Refresco[sabor]) categorias.Refresco[sabor] = [];
+                            categorias.Refresco[sabor].push({
+                                nombre: p.nombre,
+                                precio: p.precio,
+                                id: p.idProducto,
+                                tamaño
+                            });
+                        }
+                    } else {
+                        categorias[p.tipoProducto].push(p);
+                    }
+                });
+
+                // Función para crear categoría con desplegable vertical
+                function crearCategoria(nombre) {
+                    const categoria = document.createElement("section");
+                    categoria.className = "categoria";
+
+                    const header = document.createElement("div");
+                    header.className = "categoria-header";
+                    header.innerHTML = `<span>${nombre}</span><span class="icono">▶</span>`;
+
+                    const lista = document.createElement("div");
+                    lista.className = "productos-lista";
+
+                    header.onclick = () => {
+                        const abierto = lista.classList.toggle("abierto");
+                        header.classList.toggle("active", abierto);
+                    };
+
+                    categoria.appendChild(header);
+                    categoria.appendChild(lista);
+                    return { categoria, lista };
+                }
+
+                // Crear producto como caja clickable
+                function crearProducto(p) {
+                    const prod = document.createElement("div");
+                    prod.className = "producto";
+                    prod.innerHTML = `<span>${p.nombre}</span><span class="precio">$${p.precio}</span>`;
+                    prod.onclick = () => agregarAlTicket(p.nombre);
+                    return prod;
+                }
+
+                // Hamburguesas
+                const { categoria: catHamb, lista: listaHamb } = crearCategoria("🍔 Hamburguesas");
+                categorias.Hamburguesa.forEach(p => listaHamb.appendChild(crearProducto(p)));
+                menuContenedor.appendChild(catHamb);
+
+                // Papas
+                const { categoria: catPapas, lista: listaPapas } = crearCategoria("🍟 Papas");
+                categorias.Papas.forEach(p => listaPapas.appendChild(crearProducto(p)));
+                menuContenedor.appendChild(catPapas);
+
+                // Refrescos con sabores desplegables y tamaños
+                const catRefrescos = document.createElement("section");
+                catRefrescos.className = "categoria";
+
+                const headerRefrescos = document.createElement("div");
+                headerRefrescos.className = "categoria-header";
+                headerRefrescos.innerHTML = `<span>🥤 Refrescos</span><span class="icono">▶</span>`;
+                catRefrescos.appendChild(headerRefrescos);
+
+                const listaRefrescos = document.createElement("div");
+                listaRefrescos.className = "productos-lista";
+                catRefrescos.appendChild(listaRefrescos);
+
+                headerRefrescos.onclick = () => {
+                    const abierto = listaRefrescos.classList.toggle("abierto");
+                    headerRefrescos.classList.toggle("active", abierto);
+                };
+
+                for (const sabor in categorias.Refresco) {
+                    const saborDiv = document.createElement("div");
+                    saborDiv.className = "refresco-sabor";
+
+                    const saborHeader = document.createElement("div");
+                    saborHeader.className = "refresco-sabor-header";
+                    saborHeader.textContent = sabor;
+
+                    const icono = document.createElement("span");
+                    icono.textContent = "▶";
+                    icono.style.transition = "transform 0.3s ease";
+                    saborHeader.appendChild(icono);
+
+                    const tamanosDiv = document.createElement("div");
+                    tamanosDiv.className = "refresco-tamanos";
+
+                    saborHeader.onclick = () => {
+                        const abierto = tamanosDiv.classList.toggle("abierto");
+                        icono.style.transform = abierto ? "rotate(90deg)" : "rotate(0deg)";
+                    };
+
+                    categorias.Refresco[sabor].forEach(r => {
+                        const btn = document.createElement("div");
+                        btn.className = "tamano-btn";
+                        btn.textContent = `${r.tamaño} - $${r.precio}`;
+                        btn.onclick = () => agregarAlTicketRefresco(r.nombre, r.precio, r.id);
+                        tamanosDiv.appendChild(btn);
+                    });
+
+                    saborDiv.appendChild(saborHeader);
+                    saborDiv.appendChild(tamanosDiv);
+                    listaRefrescos.appendChild(saborDiv);
+                }
+
+                menuContenedor.appendChild(catRefrescos);
+
+            } catch (error) {
+                console.error("Error al cargar el menú:", error);
+                alert("No se pudo cargar el menú desde el servidor.");
+            }
         }
 
-        function agregarAlTicket(nombreProducto, precio = null) {
+        function agregarAlTicket(nombreProducto) {
             const producto = productoCatalogo[nombreProducto];
             if (!producto) {
                 alert("Producto no registrado.");
-                return;
-            }
-            if (producto.tipo === "Refresco") {
-                alert("Por favor selecciona un sabor para el refresco");
                 return;
             }
 
@@ -272,6 +482,31 @@
             });
 
             renderTicket();
+        }
+
+        function agregarAlTicketRefresco(nombreProducto, precio, idProducto) {
+            ticket.push({
+                tipoProducto: nombreProducto,
+                tipo: "Refresco",
+                idProducto: idProducto,
+                cantidad: 1,
+                precioUnitario: precio
+            });
+
+            renderTicket();
+        }
+
+        function AgregarNuevoTicket() {
+            ticket.length = 0;
+            renderTicket();
+
+            document.getElementById('mesa').value = '';
+            document.getElementById('fecha').value = '';
+            document.getElementById('estado').textContent = 'Pendiente';
+
+            ticketIdActual = null; 
+
+            alert('Nuevo pedido iniciado 📝');
         }
 
         function renderTicket() {
@@ -303,7 +538,7 @@
             const dto = {
                 NumMesa: parseInt(mesa),
                 Detalles: ticket.map(item => ({
-                    TipoProducto: item.tipo,  // Usará el ENUM (Hamburguesa, Papas, Refresco)
+                    TipoProducto: item.tipo,
                     IdProducto: item.idProducto,
                     Cantidad: item.cantidad,
                     PrecioUnitario: item.precioUnitario
@@ -311,7 +546,7 @@
             };
 
             try {
-                const response = await fetch("https://192.168.1.72:45455/api/Tickets/CrearTicketConDetalles", {
+                const response = await fetch("https://192.168.1.104:45455/api/Tickets/CrearTicketConDetalles", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -326,6 +561,19 @@
                 }
 
                 const result = await response.json();
+
+                // 🔥 Captura y guarda el ID del ticket
+                ticketIdActual = result.IdPedido || result.idPedido || null;
+
+                // 🔥 Actualiza el estado visual
+                document.getElementById('estado').textContent = 'Enviado a cocina';
+
+                // 🔥 Muestra el ID visualmente si tienes el span
+                const ticketIdSpan = document.getElementById('ticket-id');
+                if (ticketIdSpan && ticketIdActual) {
+                    ticketIdSpan.textContent = ticketIdActual;
+                }
+
                 alert("✅ " + result.mensaje);
                 ticket.length = 0;
                 renderTicket();
@@ -336,65 +584,46 @@
             }
         }
 
-        function Finalizar() {
-            if (ticket.length === 0) {
-                alert("No hay ticket abierto.");
+        async function Finalizar() {
+            if (!ticketIdActual) {
+                alert("No hay ticket cargado o no se puede obtener el ID.");
                 return;
             }
 
-            if (confirm("¿Confirmas que el ticket ha sido pagado?")) {
-                alert("✅ Ticket pagado. ¡Gracias por tu servicio!");
-                ticket.length = 0;
-                renderTicket();
+            const confirmacion = confirm("¿Estás seguro de que deseas finalizar el servicio (eliminar el ticket)?");
+
+            if (!confirmacion) return;
+
+            try {
+                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${ticketIdActual}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const resultado = await response.json();
+                if (response.ok) {
+                    alert(resultado.mensaje);
+                    ticket.length = 0;
+                    renderTicket();
+                    ticketIdActual = null;
+
+                    // 🔥 Actualizar visualmente el estado e ID
+                    document.getElementById('estado').textContent = 'Finalizado';
+                    const ticketIdSpan = document.getElementById('ticket-id');
+                    if (ticketIdSpan) ticketIdSpan.textContent = 'N/A';
+
+                    // 🔁 Redirigir a la vista de pedidos
+                    window.location.href = "pedidos.html"; // Ajusta la URL según tu estructura
+                } else {
+                    alert("Error: " + (resultado.mensaje || resultado[0] || "No se pudo eliminar el ticket."));
+                }
+            } catch (error) {
+                console.error("Error al eliminar el ticket:", error);
+                alert("Ocurrió un error al comunicarse con el servidor.");
             }
-        }
-
-        const sabores = ['Naranja', 'Fresa', 'Coca'];
-        let saborBase = '';
-        let saborPrecio = 0;
-
-        function mostrarSabores(tamano) {
-            const container = document.getElementById('sabores-container');
-            const opciones = document.getElementById('sabores-opciones');
-
-            // Limpiar opciones anteriores
-            opciones.innerHTML = '<tr><th style="background-color: #FADA7A;">Sabor</th><th style="background-color: #F5F0CD;">Seleccionar</th></tr>';
-
-            // Agregar cada sabor disponible
-            Object.keys(saboresRefresco).forEach(sabor => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-            <td>${sabor}</td>
-            <td><button onclick="seleccionarSabor('${tamano}', '${sabor}')">Agregar</button></td>
-        `;
-                opciones.appendChild(tr);
-            });
-
-            container.style.display = 'block';
-        }
-
-        function seleccionarSabor(tamano, sabor) {
-            const nombreSabor = Object.keys(saboresRefresco).find(key => key.includes(sabor));
-            const idSabor = saboresRefresco[nombreSabor];
-
-            // Buscar el precio exacto según tamaño y sabor
-            let precio;
-            switch (tamano) {
-                case 'Chico': precio = 15.00; break;
-                case 'Mediano': precio = 18.00; break;
-                case 'Grande': precio = 20.00; break;
-            }
-
-            ticket.push({
-                tipoProducto: `Ref. ${tamano} ${nombreSabor}`,
-                tipo: "Refresco",
-                idProducto: idSabor,  // ID del sabor
-                cantidad: 1,
-                precioUnitario: precio
-            });
-
-            renderTicket();
-            document.getElementById('sabores-container').style.display = 'none';
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -402,6 +631,8 @@
         if (mesa) {
             document.getElementById("mesa").value = mesa;
         }
+
+        window.addEventListener("DOMContentLoaded", cargarMenuDesdeAPI);
     </script>
 </body>
 </html>

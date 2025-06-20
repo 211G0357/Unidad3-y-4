@@ -62,7 +62,7 @@
     <button onclick="location.href='Index.html'" style="margin-bottom: 20px;">Nuevo Pedido</button>
 
     <div id="contenedor-pedidos"></div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         async function cargarPedidos() {
             const token = localStorage.getItem("token");
@@ -73,7 +73,7 @@
             }
 
             try {
-                const response = await fetch("https://192.168.1.72:45455/api/Tickets/PedidosPorMesa", {
+                const response = await fetch("https://192.168.1.104:45455/api/Tickets/PedidosPorMesa", {
                     headers: {
                         "Authorization": "Bearer " + token
                     }
@@ -95,10 +95,10 @@
                         const divPedido = document.createElement("div");
                         divPedido.className = "pedido";
                         divPedido.innerHTML = `
-                                <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
-                                <p><strong>Platillos:</strong> ${platillos}</p>
-                                <p><strong>Estado:</strong> ${ticket.estado}</p>
-                            `;
+                                    <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
+                                    <p><strong>Platillos:</strong> ${platillos}</p>
+                                    <p><strong>Estado:</strong> ${ticket.estado}</p>
+                                `;
                         divPedido.onclick = () => IrATicket(mesa.numMesa);
                         divMesa.appendChild(divPedido);
                     });

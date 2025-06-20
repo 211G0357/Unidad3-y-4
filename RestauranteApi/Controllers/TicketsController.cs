@@ -6,6 +6,7 @@ using RestauranteApi.Models.DTOs;
 using RestauranteApi.Models.Entities;
 using RestauranteApi.Repositories;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net.Sockets;
 
 [Authorize(Roles = "Mesero")]
@@ -64,7 +65,7 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> GetPedidosPorMesa()
     {
         var pedidos = await _context.Pedido
-            .Where(p => p.Estado == "Pendiente" || p.Estado == "Activo")
+            
             .Include(p => p.Pedidodetalle)
             .Include(p => p.IdUsuarioNavigation)
             .ToListAsync();
@@ -209,5 +210,35 @@ public class TicketsController : ControllerBase
         // Aquí podrías insertar los detalles del pedido si vienen incluidos en el DTO
 
         return Ok();
+    }
+    [Authorize(Roles = "Mesero")]
+    [HttpDelete("EliminarTicket/{id}")]
+    public IActionResult EliminarTicket(int id)
+    {
+        var ticket = _context.Pedido
+               .Include(p => p.Pedidodetalle)
+               .FirstOrDefault(p => p.IdPedido == id);
+
+        if (ticket == null)
+            return NotFound("El ticket no existe.");
+
+        if (ticket.Estado != "Completado")
+            return BadRequest("Solo se pueden eliminar tickets en estado Completados.");
+
+        // Eliminar detalles asociados
+        var detalles = _context.Pedidodetalle.Where(d => d.IdPedido == id).ToList();
+        _context.Pedidodetalle.RemoveRange(detalles);
+
+        // Eliminar registros en cocina si existen
+        var idsDetalle = detalles.Select(d => d.IdDetalle).ToList();
+        var enCocina = _context.Pedidococina.Where(pc => idsDetalle.Contains((int)pc.IdDetalle)).ToList();
+        _context.Pedidococina.RemoveRange(enCocina);
+
+        // Eliminar el ticket
+        _context.Pedido.Remove(ticket);
+
+        _context.SaveChanges();
+
+        return Ok(new { mensaje = "Ticket eliminado correctamente" });
     }
 }

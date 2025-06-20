@@ -303,9 +303,7 @@
         </div>
 
         <button onclick="enviarPedido()">Enviar a Cocina</button>
-        <button onclick="Finalizar()">Finalizar Servicio</button>
     </div>
-
     <script>
         let ticketIdActual = null;
         const ticket = [];
@@ -313,7 +311,6 @@
         const totalSpan = document.getElementById('total');
         const mesaInput = document.getElementById('mesa');
         const productoCatalogo = {};
-        
 
         async function cargarMenuDesdeAPI() {
             try {
@@ -326,7 +323,6 @@
                 if (!response.ok) throw new Error("Error al obtener productos del servidor");
 
                 const productos = await response.json();
-                const productoCatalogo = {};
 
                 const menuContenedor = document.querySelector(".menu");
                 if (!menuContenedor) throw new Error("No se encontró el contenedor .menu en el DOM");
@@ -365,7 +361,6 @@
                     }
                 });
 
-                // Función para crear categoría con desplegable vertical
                 function crearCategoria(nombre) {
                     const categoria = document.createElement("section");
                     categoria.className = "categoria";
@@ -387,7 +382,6 @@
                     return { categoria, lista };
                 }
 
-                // Crear producto como caja clickable
                 function crearProducto(p) {
                     const prod = document.createElement("div");
                     prod.className = "producto";
@@ -396,17 +390,14 @@
                     return prod;
                 }
 
-                // Hamburguesas
                 const { categoria: catHamb, lista: listaHamb } = crearCategoria("🍔 Hamburguesas");
                 categorias.Hamburguesa.forEach(p => listaHamb.appendChild(crearProducto(p)));
                 menuContenedor.appendChild(catHamb);
 
-                // Papas
                 const { categoria: catPapas, lista: listaPapas } = crearCategoria("🍟 Papas");
                 categorias.Papas.forEach(p => listaPapas.appendChild(crearProducto(p)));
                 menuContenedor.appendChild(catPapas);
 
-                // Refrescos con sabores desplegables y tamaños
                 const catRefrescos = document.createElement("section");
                 catRefrescos.className = "categoria";
 
@@ -504,7 +495,7 @@
             document.getElementById('fecha').value = '';
             document.getElementById('estado').textContent = 'Pendiente';
 
-            ticketIdActual = null; 
+            ticketIdActual = null;
 
             alert('Nuevo pedido iniciado 📝');
         }
@@ -562,13 +553,10 @@
 
                 const result = await response.json();
 
-                // 🔥 Captura y guarda el ID del ticket
-                ticketIdActual = result.IdPedido || result.idPedido || null;
+                ticketIdActual = result.idPedido || null;
 
-                // 🔥 Actualiza el estado visual
                 document.getElementById('estado').textContent = 'Enviado a cocina';
 
-                // 🔥 Muestra el ID visualmente si tienes el span
                 const ticketIdSpan = document.getElementById('ticket-id');
                 if (ticketIdSpan && ticketIdActual) {
                     ticketIdSpan.textContent = ticketIdActual;
@@ -584,55 +572,60 @@
             }
         }
 
-        async function Finalizar() {
-            if (!ticketIdActual) {
-                alert("No hay ticket cargado o no se puede obtener el ID.");
-                return;
-            }
-
-            const confirmacion = confirm("¿Estás seguro de que deseas finalizar el servicio (eliminar el ticket)?");
-
-            if (!confirmacion) return;
-
-            try {
-                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${ticketIdActual}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const resultado = await response.json();
-                if (response.ok) {
-                    alert(resultado.mensaje);
-                    ticket.length = 0;
-                    renderTicket();
-                    ticketIdActual = null;
-
-                    // 🔥 Actualizar visualmente el estado e ID
-                    document.getElementById('estado').textContent = 'Finalizado';
-                    const ticketIdSpan = document.getElementById('ticket-id');
-                    if (ticketIdSpan) ticketIdSpan.textContent = 'N/A';
-
-                    // 🔁 Redirigir a la vista de pedidos
-                    window.location.href = "pedidos.html"; // Ajusta la URL según tu estructura
-                } else {
-                    alert("Error: " + (resultado.mensaje || resultado[0] || "No se pudo eliminar el ticket."));
-                }
-            } catch (error) {
-                console.error("Error al eliminar el ticket:", error);
-                alert("Ocurrió un error al comunicarse con el servidor.");
-            }
-        }
-
+        
         const params = new URLSearchParams(window.location.search);
         const mesa = params.get("mesa");
+        const idpedido = params.get("idPedido");
+
         if (mesa) {
             document.getElementById("mesa").value = mesa;
         }
+        if (idpedido) {
+            ticketIdActual = idPedido;
+            document.getElementById("ticket-id").textContent = idPedido;
+        }
 
-        window.addEventListener("DOMContentLoaded", cargarMenuDesdeAPI);
+        window.addEventListener("DOMContentLoaded", async () => {
+            await cargarMenuDesdeAPI();
+
+            if (ticketIdActual) {
+                try {
+                    const response = await fetch(`https://192.168.1.104:45455/api/Tickets/ObtenerTicket/${ticketIdActual}`, {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        }
+                    });
+
+                    if (!response.ok) throw new Error("No se pudo obtener el ticket");
+
+                    const data = await response.json();
+
+                    document.getElementById("mesa").value = data.numMesa;
+                    document.getElementById("estado").textContent = data.estado;
+                    document.getElementById("fecha").value = new Date(data.fecha).toISOString().slice(0, 16);
+                    document.getElementById("ticket-id").textContent = data.idPedido;
+
+                    ticket.length = 0;
+                    data.detalles.forEach(item => {
+                        ticket.push({
+                            tipoProducto: item.tipoProducto,
+                            tipo: item.tipoProducto,
+                            idProducto: item.idProducto,
+                            cantidad: item.cantidad,
+                            precioUnitario: item.precioUnitario
+                        });
+                    });
+                    renderTicket();
+
+                } catch (err) {
+                    console.error("Error al cargar ticket actual:", err);
+                    alert("Error al cargar ticket actual");
+                }
+            }
+        });
     </script>
+
+
+    
 </body>
 </html>

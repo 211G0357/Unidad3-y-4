@@ -241,4 +241,38 @@ public class TicketsController : ControllerBase
 
         return Ok(new { mensaje = "Ticket eliminado correctamente" });
     }
+    [Authorize(Roles = "Mesero,Cocinero")]
+    [HttpGet("ObtenerTicket/{id}")]
+    public async Task<IActionResult> ObtenerTicket(int id)
+    {
+        var ticket = await _context.Pedido
+            .Include(p => p.Pedidodetalle)
+            .Include(p => p.IdUsuarioNavigation)
+            .FirstOrDefaultAsync(p => p.IdPedido == id);
+
+        if (ticket == null)
+            return NotFound("El ticket no existe.");
+
+        var detalles = ticket.Pedidodetalle.Select(d => new
+        {
+            d.IdDetalle,
+            d.TipoProducto,
+            d.IdProducto,
+            d.Cantidad,
+            d.PrecioUnitario
+        }).ToList();
+
+        var resultado = new
+        {
+            ticket.IdPedido,
+            ticket.NumMesa,
+            ticket.Estado,
+            ticket.Fecha,
+            NombreMesero = ticket.IdUsuarioNavigation?.Nombre ?? "Desconocido",
+            Detalles = detalles
+        };
+
+        return Ok(resultado);
+    }
+
 }

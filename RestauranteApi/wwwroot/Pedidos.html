@@ -95,11 +95,17 @@
                         const divPedido = document.createElement("div");
                         divPedido.className = "pedido";
                         divPedido.innerHTML = `
-                                    <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
-                                    <p><strong>Platillos:</strong> ${platillos}</p>
-                                    <p><strong>Estado:</strong> ${ticket.estado}</p>
-                                `;
-                        divPedido.onclick = () => IrATicket(mesa.numMesa);
+                                <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
+                                <p><strong>Platillos:</strong> ${platillos}</p>
+                                <p><strong>Estado:</strong> ${ticket.estado}</p>
+                                ${ticket.estado === "Completado" ? '<button onclick="Finalizar(event, ' + ticket.idPedido + ')">Finalizar Servicio</button>' : ''}
+                            `;
+                        divPedido.onclick = (e) => {
+                            // Evitar que el click en el botón active el IrATicket
+                            if (e.target.tagName !== 'BUTTON') {
+                                IrATicket(mesa.numMesa, ticket.idPedido);
+                            }
+                        };
                         divMesa.appendChild(divPedido);
                     });
 
@@ -112,8 +118,43 @@
             }
         }
 
-        function IrATicket(mesa) {
-            window.location.href = `Index.html?mesa=${mesa}`;
+        function IrATicket(mesa, idPedido) {
+            window.location.href = `Index.html?mesa=${mesa}&IdPedido=${idPedido}`;
+        }
+
+        async function Finalizar(event, idPedido) {
+            event.stopPropagation(); // Evitar que el evento se propague al div padre
+
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("No hay sesión activa.");
+                window.location.href = "Login.html";
+                return;
+            }
+
+            if (!confirm("¿Estás seguro de que deseas finalizar este servicio?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${idPedido}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error al eliminar el ticket");
+                }
+
+                alert("Servicio finalizado correctamente");
+                cargarPedidos(); // Recargar la lista de pedidos
+            } catch (error) {
+                console.error("Error al finalizar servicio:", error);
+                alert(error.message || "No se pudo finalizar el servicio");
+            }
         }
 
         cargarPedidos();

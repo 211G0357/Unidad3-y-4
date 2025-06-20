@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using RestauranteApi.Models.Entities;
 using System.Threading.Tasks;
 namespace RestauranteApi.Services
 {
     public class PedidosHub:Hub
     {
+        
         public async Task NotificarPedidoListo(int idPedido, string mesa)
         {
             await Clients.All.SendAsync("PedidoListo", new
@@ -18,14 +20,7 @@ namespace RestauranteApi.Services
         {
             await Clients.All.SendAsync("EstadoCocinaActualizado", idDetalle, estado);
         }
-        public async Task AddToGroup(string groupName)
-        {
-            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        }
+       
 
-        public async Task RemoveFromGroup(string groupName)
-        {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
-        }
     }
 }

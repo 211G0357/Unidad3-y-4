@@ -84,7 +84,8 @@
 <body>
     <div id="notificaciones" class="notificaciones-container"></div>
     <h1>Pedidos Agrupados por Mesa</h1>
-    <button onclick="location.href='Index.html'" style="margin-bottom: 20px;">Nuevo Pedido</button>
+    <button onclick="location.href='Index.html'" style="color: white; text-decoration: none;
+       padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Nuevo Pedido</button>
 
     <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none;
        padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
@@ -92,20 +93,74 @@
     <div id="contenedor-pedidos"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://192.168.1.104:45455/pedidosHub")
-            .withAutomaticReconnect()
-            .build();
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Verificar autenticación
+                if (!localStorage.getItem('token')) {
+                    mostrarMensaje('No estás autenticado. Redirigiendo a login...', true);
+                    setTimeout(() => window.location.href = '/login', 2000);
+                    return;
+                }
 
-        connection.on("PedidoListo", (pedido) => {
-            console.log("📢 Pedido listo:", pedido);
-            mostrarNotificacion(`El pedido #${pedido.IdPedido} de la mesa #${pedido.NumMesa} está listo para servir.`);
-            actualizarEstadoPedido(pedido.IdPedido);
+                // Cargar pedidos iniciales
+                await cargarPedidos();
+
+                // Conectar a SignalR para actualizaciones en tiempo real
+                await conectarSignalR();
+
+                // Configurar listeners para los botones de actualización
+                configurarEventListeners();
+            } catch (error) {
+                console.error('Error inicial:', error);
+                mostrarMensaje('Error al iniciar la aplicación: ' + error.message, true);
+            }
         });
 
-        connection.start()
-            .then(() => console.log("✅ Conectado a SignalR"))
-            .catch(err => console.error("❌ Error al conectar con SignalR:", err));
+        async function conectarSignalR() {
+            try {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("https://192.168.1.104:45455/pedidosHub")
+                    .configureLogging(signalR.LogLevel.Warning)
+                    .withAutomaticReconnect()
+                    .build();
+
+                // Eventos para actualización de pedidos
+                connection.on("ActualizarPedidos", () => {
+                    console.log('Evento ActualizarPedidos recibido');
+                    mostrarMensaje('Nueva actualización de estado recibida');
+                    cargarPedidos();
+                });
+
+                connection.on("NuevoProducto", (mensaje) => {
+                    mostrarNotificacion(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
+                    cargarPedidos();
+                });
+
+                // Evento específico para pedidos listos
+                connection.on("ActualizarPedido", (pedido) => {
+                    console.log("📢 Pedido listo:", pedido);
+                    mostrarNotificacion(`El pedido #${pedido.IdPedido} de la mesa #${pedido.NumMesa} está listo para servir.`);
+                    actualizarPedido(pedido.IdPedido);
+                });
+
+                connection.onreconnecting(() => {
+                    mostrarMensaje('Reconectando con el servidor...', true);
+                });
+
+                connection.onreconnected(() => {
+                    mostrarMensaje('Conexión restablecida');
+                    cargarPedidos();
+                });
+
+                await connection.start();
+                console.log('Conectado al hub de pedidos');
+
+            } catch (error) {
+                console.error('Error con SignalR:', error);
+                mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
+                setInterval(cargarPedidos, 30000);
+            }
+        }
 
         function mostrarNotificacion(mensaje) {
             const contenedor = document.getElementById("notificaciones");
@@ -124,7 +179,7 @@
             }, 5000);
         }
 
-        function actualizarEstadoPedido(idPedido) {
+        function actualizarPedido(idPedido) {
             const todosPedidos = document.querySelectorAll(".pedido");
             todosPedidos.forEach(pedido => {
                 const btn = pedido.querySelector(".btn-finalizar");
@@ -166,19 +221,19 @@
                         divPedido.className = "pedido";
 
                         const botonFinalizar = `
-                                <button class="btn-finalizar"
-                                    onclick="Finalizar(event, ${ticket.idPedido})"
-                                    ${ticket.estado !== "Terminado" ? "disabled" : ""}>
-                                    Finalizar Servicio
-                                </button>
-                            `;
+                    <button class="btn-finalizar"
+                        onclick="Finalizar(event, ${ticket.idPedido})"
+                        ${ticket.estado !== "Terminado" ? "disabled" : ""}>
+                        Finalizar Servicio
+                    </button>
+                `;
 
                         divPedido.innerHTML = `
-                                <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
-                                <p><strong>Platillos:</strong> ${platillos}</p>
-                                <p><strong>Estado:</strong> ${ticket.estado}</p>
-                                ${botonFinalizar}
-                            `;
+                    <p><strong>Mesero:</strong> ${ticket.nombreMesero}</p>
+                    <p><strong>Platillos:</strong> ${platillos}</p>
+                    <p><strong>Estado:</strong> ${ticket.estado}</p>
+                    ${botonFinalizar}
+                `;
 
                         divPedido.onclick = (e) => {
                             if (e.target.tagName !== 'BUTTON') {
@@ -198,6 +253,133 @@
             }
         }
 
+        function configurarEventListeners() {
+            // Aquí puedes agregar listeners para otros botones o interacciones
+        }
+
+        function mostrarMensaje(mensaje, esError = false) {
+            if (esError) {
+                console.error('❌ ' + mensaje);
+                alert(mensaje);
+            } else {
+                console.log('ℹ️ ' + mensaje);
+                // Puedes usar toast o cualquier otro sistema de notificaciones en lugar de alert
+                alert(mensaje);
+            }
+        }
+
+        async function confirmarEliminacion(idPedido) {
+            return new Promise((resolve) => {
+                // Crear elementos del modal de confirmación
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '1000';
+
+                const modalContent = document.createElement('div');
+                modalContent.style.backgroundColor = 'white';
+                modalContent.style.padding = '20px';
+                modalContent.style.borderRadius = '8px';
+                modalContent.style.textAlign = 'center';
+
+                const mensaje = document.createElement('p');
+                mensaje.textContent = `¿Estás seguro de que deseas eliminar el ticket #${idPedido}?`;
+                mensaje.style.marginBottom = '20px';
+
+                const btnConfirmar = document.createElement('button');
+                btnConfirmar.textContent = 'Confirmar';
+                btnConfirmar.style.marginRight = '10px';
+                btnConfirmar.style.padding = '8px 16px';
+                btnConfirmar.style.backgroundColor = '#dc3545';
+                btnConfirmar.style.color = 'white';
+                btnConfirmar.style.border = 'none';
+                btnConfirmar.style.borderRadius = '4px';
+
+                const btnCancelar = document.createElement('button');
+                btnCancelar.textContent = 'Cancelar';
+                btnCancelar.style.padding = '8px 16px';
+                btnCancelar.style.backgroundColor = '#6c757d';
+                btnCancelar.style.color = 'white';
+                btnCancelar.style.border = 'none';
+                btnCancelar.style.borderRadius = '4px';
+
+                modalContent.appendChild(mensaje);
+                modalContent.appendChild(btnConfirmar);
+                modalContent.appendChild(btnCancelar);
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+
+                // Manejar eventos de los botones
+                btnConfirmar.onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve(true);
+                };
+
+                btnCancelar.onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve(false);
+                };
+            });
+        }
+
+        window.Finalizar = async function (event, idPedido) {
+            event.stopPropagation();
+
+            const token = localStorage.getItem("token");
+            if (!token) {
+                mostrarMensaje("No hay sesión activa.", true);
+                window.location.href = "Login.html";
+                return;
+            }
+
+            try {
+                // Mostrar confirmación personalizada
+                const confirmado = await confirmarEliminacion(idPedido);
+                if (!confirmado) return;
+
+                // Mostrar carga mientras se procesa
+                const originalText = event.target.innerHTML;
+                event.target.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Eliminando...';
+                event.target.disabled = true;
+
+                const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${idPedido}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.mensaje || errorData?.message || "Error al eliminar el ticket");
+                }
+
+                const result = await response.json();
+                mostrarMensaje(result.mensaje || `Ticket #${idPedido} eliminado correctamente`);
+
+                // Recargar la lista de pedidos
+                if (typeof cargarPedidos === 'function') {
+                    await cargarPedidos();
+                }
+
+            } catch (error) {
+                mostrarMensaje("Error al eliminar el ticket: " + error.message, true);
+            } finally {
+                if (event.target) {
+                    event.target.innerHTML = originalText;
+                    event.target.disabled = false;
+                }
+            }
+        };
+
         function IrATicket(mesa, idPedido) {
             window.location.href = `Index.html?mesa=${mesa}&IdPedido=${idPedido}`;
         }
@@ -212,32 +394,36 @@
                 return;
             }
 
-            if (!confirm("¿Estás seguro de que deseas finalizar este servicio?")) return;
+            if (!confirm("¿Estás seguro de que deseas finalizar y eliminar este ticket?")) return;
 
             try {
                 const response = await fetch(`https://192.168.1.104:45455/api/Tickets/EliminarTicket/${idPedido}`, {
                     method: 'DELETE',
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    }
                 });
 
                 if (!response.ok) {
                     let errorMessage = "Error al eliminar el ticket";
-                    const text = await response.text();
                     try {
-                        const errorData = JSON.parse(text);
-                        errorMessage = errorData.message || errorMessage;
+                        const errorData = await response.json();
+                        errorMessage = errorData.mensaje || errorData.message || errorMessage;
                     } catch {
+                        const text = await response.text();
                         if (text) errorMessage = text;
                     }
                     throw new Error(errorMessage);
                 }
 
-                alert("Servicio finalizado correctamente");
-                // No refrescar, SignalR debe encargarse si hay cambios
+                const result = await response.json();
+                alert(result.mensaje || "Ticket eliminado correctamente");
+                // No es necesario refrescar, SignalR se encargará de la actualización
 
             } catch (error) {
-                console.error("Error al finalizar servicio:", error);
-                alert(error.message || "No se pudo finalizar el servicio");
+                console.error("Error al eliminar ticket:", error);
+                alert(error.message || "No se pudo eliminar el ticket");
             }
         }
 

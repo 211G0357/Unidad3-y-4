@@ -106,7 +106,8 @@ namespace RestauranteApi.Controllers
             if (detalle.TipoProducto != "Hamburguesa" && detalle.TipoProducto != "Papas")
                 return BadRequest("Solo hamburguesas y papas pueden actualizar estado");
 
-            var estadoCocina = _cocinaRepository.GetAll().FirstOrDefault(c => c.IdDetalle == idDetalle);
+            var cocinaAll = _cocinaRepository.GetAll().ToList(); // Solo una vez
+            var estadoCocina = cocinaAll.FirstOrDefault(c => c.IdDetalle == idDetalle);
 
             if (estadoCocina == null)
             {
@@ -126,6 +127,7 @@ namespace RestauranteApi.Controllers
                 _cocinaRepository.Update(estadoCocina);
             }
 
+            // Notificación individual del producto
             if (_hubContext != null)
             {
                 await _hubContext.Clients.Group("Cocina").SendAsync("EstadoActualizado", new
@@ -140,10 +142,14 @@ namespace RestauranteApi.Controllers
             var pedido = _pedidoRepository.Get(detalle.IdPedido ?? 0);
             if (pedido != null)
             {
-                var detallesPedido = _detalleRepository.GetAll().Where(d => d.IdPedido == pedido.IdPedido).ToList();
+                var detallesPedido = _detalleRepository.GetAll()
+                    .Where(d => d.IdPedido == pedido.IdPedido)
+                    .ToList();
+
+                // Verificar si todos los productos de cocina están terminados
                 var todosTerminados = detallesPedido.All(d =>
                     d.TipoProducto != "Hamburguesa" && d.TipoProducto != "Papas" ||
-                    _cocinaRepository.GetAll().FirstOrDefault(c => c.IdDetalle == d.IdDetalle)?.Estado == "Terminado");
+                    cocinaAll.FirstOrDefault(c => c.IdDetalle == d.IdDetalle)?.Estado == "Terminado");
 
                 if (todosTerminados)
                 {
@@ -152,12 +158,16 @@ namespace RestauranteApi.Controllers
 
                     if (_hubContext != null)
                     {
+                        // Notificar a meseros
                         await _hubContext.Clients.Group("Meseros").SendAsync("PedidoListo", new
                         {
                             pedido.IdPedido,
                             pedido.NumMesa,
                             HoraTerminado = DateTime.Now
                         });
+
+                        // 🔔 Notificar a cocina (y todos los clientes) que deben recargar pedidos
+                        await _hubContext.Clients.All.SendAsync("ActualizarPedidos");
                     }
                 }
             }
@@ -169,6 +179,7 @@ namespace RestauranteApi.Controllers
                 NuevoEstado = nuevoEstado
             });
         }
+
 
         [HttpPost("AgregarProducto")]
         public async Task<IActionResult> AgregarProducto([FromBody] TicketDetalleCrearDTO dto)

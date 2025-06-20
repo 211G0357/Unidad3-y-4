@@ -134,9 +134,14 @@
         
     </style>
 </head>
+
 <body>
-    <h2>Cocina</h2>
-    <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none; padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
+    <header>
+        <h2>Cocina</h2>
+        <a href="Login.html" class="btn-cerrarSesion" style="color: white; text-decoration: none; padding: 10px 20px; background-color: #007BFF; border: none; border-radius: 4px;">Cerrar Sesión</a>
+    </header>
+    
+    
 
     <div id="contenedor-pedidos"></div>
 
@@ -167,6 +172,77 @@
                 mostrarMensaje('Error al iniciar la aplicación: ' + error.message, true);
             }
         });
+        async function conectarSignalR() {
+            try {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(HUB_URL)
+                    .configureLogging(signalR.LogLevel.Warning)
+                    .withAutomaticReconnect()
+                    .build();
+
+
+                connection.on("ActualizarPedidos", (pedidoActualizado) => {
+                    mostrarMensaje('Nueva actualización de estado recibida');
+                    
+                    if (pedidoActualizado && pedidoActualizado.idPedido) {
+                        actualizarPedidoIndividual(pedidoActualizado);
+                    } else {
+                        cargarPedidos(); 
+                    }
+                });
+
+                connection.on("NuevoProducto", (mensaje) => {
+                    mostrarMensaje(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
+                    cargarPedidos();
+                });
+
+                connection.onreconnecting(() => {
+                    mostrarMensaje('Reconectando con el servidor...', true);
+                });
+
+                connection.onreconnected(() => {
+                    mostrarMensaje('Conexión restablecida');
+                    cargarPedidos();
+                });
+
+                await connection.start();
+                console.log('Conectado al hub de pedidos');
+
+            } catch (error) {
+                console.error('Error con SignalR:', error);
+                mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
+                setInterval(cargarPedidos, 30000);
+            }
+        }
+        function actualizarPedidoIndividual(pedidoActualizado) {
+            const pedidoElement = document.querySelector(`.pedido[data-pedido-id="${pedidoActualizado.idPedido}"]`);
+
+            if (pedidoElement) {
+                const estadoElement = pedidoElement.querySelector('.pedido-header .estado');
+                if (estadoElement && pedidoActualizado.estado) {
+                    estadoElement.textContent = pedidoActualizado.estado;
+                    estadoElement.className = `estado estado-${pedidoActualizado.estado.toLowerCase().replace(' ', '-')}`;
+                }
+
+                (pedidoActualizado.detalles || []).forEach(detalle => {
+                    const productoElement = pedidoElement.querySelector(`.producto[data-detalle-id="${detalle.idDetalle}"]`);
+                    if (productoElement) {
+                        const estadoProductoElement = productoElement.querySelector('.producto-info .estado');
+                        if (estadoProductoElement && detalle.estadoCocina) {
+                            estadoProductoElement.textContent = detalle.estadoCocina;
+                            estadoProductoElement.className = `estado estado-${detalle.estadoCocina.toLowerCase().replace(' ', '-')}`;
+                        }
+
+                        const selectElement = productoElement.querySelector('.estado-select');
+                        if (selectElement && detalle.estadoCocina) {
+                            selectElement.value = detalle.estadoCocina;
+                        }
+                    }
+                });
+            } else {
+                cargarPedidos();
+            }
+        }
 
         async function cargarPedidos() {
             try {
@@ -289,43 +365,7 @@
             return mapeoProductos[idProducto];
         }
 
-        async function conectarSignalR() {
-            try {
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl(HUB_URL)
-                    .configureLogging(signalR.LogLevel.Warning)
-                    .withAutomaticReconnect()
-                    .build();
-
-                connection.on("EstadoActualizado", () => {
-                    mostrarMensaje('Nueva actualización de estado recibida');
-                    cargarPedidos();
-                });
-
-                connection.on("NuevoProducto", (mensaje) => {
-                    mostrarMensaje(`Nuevo producto: ${mensaje.cantidad}x ${mensaje.producto} para mesa ${mensaje.mesa}`);
-                    cargarPedidos();
-                });
-
-                connection.onreconnecting(() => {
-                    mostrarMensaje('Reconectando con el servidor...', true);
-                });
-
-                connection.onreconnected(() => {
-                    mostrarMensaje('Conexión restablecida');
-                    cargarPedidos();
-                });
-
-                await connection.start();
-                console.log('Conectado al hub de pedidos');
-
-                await connection.invoke("AddToGroup", "Cocina");
-            } catch (error) {
-                console.error('Error con SignalR:', error);
-                mostrarMensaje('Error en la conexión en tiempo real. Recargando manualmente cada 30 segundos...', true);
-                setInterval(cargarPedidos, 30000);
-            }
-        }
+        
 
         function configurarEventListeners() {
             document.addEventListener('click', async (e) => {
